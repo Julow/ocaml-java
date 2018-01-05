@@ -17,7 +17,7 @@ static jfieldID
 #define IS_NULL(env, obj) ((*env)->IsSameObject(env, obj, NULL))
 
 // ========================================================================== //
-// Caml.get_named_value
+// getNamedValue
 
 static value *get_named_value(JNIEnv *env, jstring name)
 {
@@ -54,7 +54,26 @@ jlong Java_juloo_javacaml_Caml_00024NamedValue_get(JNIEnv *env, jobject obj)
 }
 
 // ========================================================================== //
-// Caml.init
+// hashVariant
+
+jlong Java_juloo_javacaml_Caml_hashVariant(JNIEnv *env, jclass c, jstring variantName)
+{
+	char const	*name_utf;
+	value hash;
+
+	if (IS_NULL(env, variantName))
+	{
+		(*env)->ThrowNew(env, NullPointerException, "Called with null `variantName`");
+		return 0;
+	}
+	name_utf = (*env)->GetStringUTFChars(env, variantName, NULL);
+	hash = caml_hash_variant(name_utf);
+	(*env)->ReleaseStringUTFChars(env, variantName, name_utf);
+	return (jlong)hash;
+}
+
+// ========================================================================== //
+// init
 
 static int init_classes(JNIEnv *env)
 {
