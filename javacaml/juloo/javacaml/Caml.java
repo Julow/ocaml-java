@@ -21,11 +21,10 @@ public class Caml
 	 * Returns the value registered with `Callback.register` on the OCaml side.
 	 *
 	 * > `caml_named_value`
-	 *
-	 * Throws NullPointerException if `name` is null,
-	 *   NamedValueNotFoundException if `name` does not refer to any value
 	 */
-	public static native NamedValue getNamedValue(String name);
+	public static native NamedValue getNamedValue(String name)
+		throws NullPointerException, // if `name` is null
+			NamedValueNotFoundException; // if `name` is not registered
 
 	/**
 	 * Returns the hash value corresponding
@@ -34,10 +33,40 @@ public class Caml
 	 * The same name will always return the same value.
 	 *
 	 * > `caml_hash_variant`
-	 *
-	 * Throws NullPointerException if `name` is null
 	 */
-	public static native int hashVariant(String variantName);
+	public static native int hashVariant(String variantName)
+		throws NullPointerException; // if `name` is null
+
+	/**
+	 * Begin the calling of a function
+	 *
+	 * This function begins the calling of a function
+	 *
+	 * Use the `arg<Type>` functions to push the arguments
+	 *
+	 * Then, call the function with the `call_`* functions
+	 */
+	public static native void function(long value);
+
+	/**
+	 * Adds an argument onto the argument stack
+	 *
+	 * | Function		| Java type		| OCaml type
+	 * | ---			| ---			| ---
+	 * | argUnit		| 				| unit
+	 * | argInt			| int			| int (tagged 31-bit)
+	 */
+	public static native void argUnit();
+	public static native void argInt(int v);
+
+	/**
+	 * Stop the calling of a function and calls it.
+	 * Same convertions as the `arg` functions
+	 *
+	 * Throws CamlException if an OCaml exception is raised
+	 */
+	public static native void callUnit() throws CamlException;
+	public static native int callInt() throws CamlException;
 
 	/**
 	 * Class that hold the value returned by get_value
@@ -55,6 +84,14 @@ public class Caml
 		public NamedValueNotFoundException(String name)
 		{
 			super("Named value `" + name + "` not found");
+		}
+	}
+
+	public static class CamlException extends Exception
+	{
+		public CamlException(String msg)
+		{
+			super("Uncaught OCaml exception: `" + msg + "`");
 		}
 	}
 }
