@@ -85,29 +85,4 @@ public class Caml
 	public static native boolean callBool() throws CamlException;
 	public static native int callInt32() throws CamlException;
 	public static native long callInt64() throws CamlException;
-
-	/**
-	 * Class that hold the value returned by getCallback
-	 */
-	public static class Callback
-	{
-		private long closure;
-		private Callback(long c) { closure = c; }
-	}
-
-	public static class CallbackNotFoundException extends Exception
-	{
-		public CallbackNotFoundException(String name)
-		{
-			super("Callback `" + name + "` not found");
-		}
-	}
-
-	public static class CamlException extends Exception
-	{
-		public CamlException(String msg)
-		{
-			super("Uncaught OCaml exception: `" + msg + "`");
-		}
-	}
 }

@@ -80,7 +80,7 @@ void Java_juloo_javacaml_Caml_function__J(JNIEnv *env, jclass c, jlong func)
 	stack_size = 1;
 }
 
-void Java_juloo_javacaml_Caml_function__Ljuloo_javacaml_Caml_00024Callback_2(JNIEnv *env, jclass c, jobject callback)
+void Java_juloo_javacaml_Caml_function__Ljuloo_javacaml_Callback_2(JNIEnv *env, jclass c, jobject callback)
 {
 	long const func_ = (*env)->GetLongField(env, callback, Callback_closure);
 	value const func = *(value*)func_;
@@ -222,11 +222,11 @@ static int init_classes(JNIEnv *env)
 #define F(CLASS, NAME, SIG) DEF(CLASS##_##NAME, GetFieldID, CLASS, #NAME, SIG)
 
 	C("java/lang/", NullPointerException);
-	C("juloo/javacaml/Caml$", Callback);
+	C("juloo/javacaml/", Callback);
 	I(Callback, "(J)V");
 	F(Callback, closure, "J");
-	C("juloo/javacaml/Caml$", CallbackNotFoundException);
-	C("juloo/javacaml/Caml$", CamlException);
+	C("juloo/javacaml/", CallbackNotFoundException);
+	C("juloo/javacaml/", CamlException);
 
 #undef C
 #undef I
