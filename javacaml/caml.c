@@ -20,6 +20,17 @@ static jfieldID
 
 #define IS_NULL(env, obj) ((*env)->IsSameObject(env, obj, NULL))
 
+// Copy the content of `str` into a new OCaml string
+static value jstring_to_cstring(JNIEnv *env, jstring str)
+{
+	char const *const str_utf = (*env)->GetStringUTFChars(env, str, NULL);
+	value cstr;
+
+	cstr = caml_copy_string(str_utf);
+	(*env)->ReleaseStringUTFChars(env, str, str_utf);
+	return cstr;
+}
+
 // ========================================================================== //
 // Function calling
 // -
@@ -74,13 +85,24 @@ void Java_juloo_javacaml_Caml_function(JNIEnv *env, jclass c, jlong func)
 #define ARG(NAME, TYPE, CONVERT) \
 void Java_juloo_javacaml_Caml_arg##NAME(JNIEnv *env, jclass c, TYPE v) \
 { \
-	Store_field(stack, stack_size, CONVERT(v)); \
+	Store_field(stack, stack_size, CONVERT(env, v)); \
 	stack_size++; \
 }
 
-#define CONVERT_UNIT(v) Val_unit
-ARG(Unit, int /* dummy */, CONVERT_UNIT)
-ARG(Int, jint, Val_long)
+#define ARG_TO_UNIT(env, v)		Val_unit
+#define ARG_TO_INT(env, v)		Val_long(v)
+#define ARG_TO_FLOAT(env, v)	caml_copy_double(v)
+#define ARG_TO_STRING(env, v)	jstring_to_cstring(env, v)
+#define ARG_TO_BOOL(env, v)		Val_bool(v)
+#define ARG_TO_INT32(env, v)	caml_copy_int32(v)
+#define ARG_TO_INT64(env, v)	caml_copy_int64(v)
+ARG(Unit, int /* dummy */, ARG_TO_UNIT)
+ARG(Int, jint, ARG_TO_INT)
+ARG(Float, jdouble, ARG_TO_FLOAT)
+ARG(String, jstring, ARG_TO_STRING)
+ARG(Bool, jboolean, ARG_TO_BOOL)
+ARG(Int32, jint, ARG_TO_INT32)
+ARG(Int64, jlong, ARG_TO_INT64)
 
 #undef ARG
 
@@ -103,11 +125,23 @@ TYPE Java_juloo_javacaml_Caml_call##NAME(JNIEnv *env, jclass c) \
 		throw_caml_exception(env, Extract_exception(result)); \
 		return DUMMY; \
 	} \
-	return CONVERT(result); \
+	return CONVERT(env, result); \
 }
 
-CALL(Unit, void, (void),)
-CALL(Int, jint, (jint)Int_val, 0)
+#define CALL_OF_UNIT(env, v)	(void)0
+#define CALL_OF_INT(env, v)		Int_val(v)
+#define CALL_OF_FLOAT(env, v)	Double_val(v)
+#define CALL_OF_STRING(env, v)	(*env)->NewStringUTF(env, String_val(v))
+#define CALL_OF_BOOL(env, v)	Bool_val(v)
+#define CALL_OF_INT32(env, v)	Int32_val(v)
+#define CALL_OF_INT64(env, v)	Int64_val(v)
+CALL(Unit, void, CALL_OF_UNIT,)
+CALL(Int, jint, CALL_OF_INT, 0)
+CALL(Float, jdouble, CALL_OF_FLOAT, 0.0)
+CALL(String, jstring, CALL_OF_STRING, NULL)
+CALL(Bool, jboolean, CALL_OF_BOOL, 0)
+CALL(Int32, jint, CALL_OF_INT32, 0)
+CALL(Int64, jlong, CALL_OF_INT64, 0)
 
 #undef CALL
 

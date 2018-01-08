@@ -55,9 +55,19 @@ public class Caml
 	 * | ---			| ---			| ---
 	 * | argUnit		| 				| unit
 	 * | argInt			| int			| int (tagged 31-bit)
+	 * | argFloat		| double		| float
+	 * | argString		| String		| string (no decoding)
+	 * | argBool		| boolean		| bool
+	 * | argInt32		| int			| int32
+	 * | argInt64		| long			| int64
 	 */
 	public static native void argUnit();
 	public static native void argInt(int v);
+	public static native void argFloat(double v);
+	public static native void argString(String v);
+	public static native void argBool(boolean v);
+	public static native void argInt32(int v);
+	public static native void argInt64(long v);
 
 	/**
 	 * Stop the calling of a function and calls it.
@@ -67,6 +77,11 @@ public class Caml
 	 */
 	public static native void callUnit() throws CamlException;
 	public static native int callInt() throws CamlException;
+	public static native double callFloat() throws CamlException;
+	public static native String callString() throws CamlException;
+	public static native boolean callBool() throws CamlException;
+	public static native int callInt32() throws CamlException;
+	public static native long callInt64() throws CamlException;
 
 	/**
 	 * Class that hold the value returned by get_value
