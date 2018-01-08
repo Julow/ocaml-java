@@ -3,7 +3,7 @@ package juloo.javacaml;
 /**
  * Thrown by `Caml.getCallback`
  */
-public class CallbackNotFoundException extends Exception
+public class CallbackNotFoundException extends RuntimeException
 {
 	public CallbackNotFoundException(String name)
 	{

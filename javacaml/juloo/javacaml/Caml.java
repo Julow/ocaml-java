@@ -17,11 +17,6 @@ public class Caml
 	public static native void startup();
 
 	/**
-	 * Like `startup`, without calling `caml_startup`
-	 */
-	public static native void init();
-
-	/**
 	 * Returns the value registered with `Callback.register` on the OCaml side.
 	 *
 	 * > `caml_named_value`
@@ -47,18 +42,30 @@ public class Caml
 	 * To call a function:
 	 *  Caml.arg<Type>: Push an argument
 	 *  Caml.call<Type>: Perform the call and collect the result
+	 *
+	 * The arguments types must match the OCaml function
+	 * and there must not be more arguments than expected
+	 *  otherwise, a crash may happen
+	 * If an argument is missing, currying occur:
+	 *  the result is a function taking the remaining arguments
+	 *
+	 * OCaml exception are handled and re-thrown on the Java side
 	 */
-	public static native void function(Value function);
-	public static native void function(Callback callback);
+	public static native void function(Value function)
+		throws NullPointerException; // if `function` is null
+	public static native void function(Callback callback)
+		throws NullPointerException; // if `callback` is null
 
 	/**
 	 * Begin the calling of a method
 	 * Same as function() but for an object's method
-	 * `methodId` can be obtained with `hasVariant`
+	 *
+	 * The `methodId` can be obtained with `Caml.hashVariant`
 	 */
 	public static native void method(Value object, int methodId)
-		throws InvalidMethodIdException;
-			// if `methodId` does not refer to any object's method
+		throws NullPointerException, // if `object` is null
+			InvalidMethodIdException;
+				// if `methodId` does not refer to any object's method
 
 	/**
 	 * Adds an argument onto the argument stack
@@ -74,14 +81,24 @@ public class Caml
 	 * | argInt64		| long			| int64
 	 * | argValue		| Value			| *
 	 */
-	public static native void argUnit();
-	public static native void argInt(int v);
-	public static native void argFloat(double v);
-	public static native void argString(String v);
-	public static native void argBool(boolean v);
-	public static native void argInt32(int v);
-	public static native void argInt64(long v);
-	public static native void argValue(Value v);
+	public static native void argUnit()
+		throws ArgumentStackOverflowException;
+	public static native void argInt(int v)
+		throws ArgumentStackOverflowException;
+	public static native void argFloat(double v)
+		throws ArgumentStackOverflowException;
+	public static native void argString(String v)
+		throws NullPointerException, // if `v` is null
+			ArgumentStackOverflowException;
+	public static native void argBool(boolean v)
+		throws ArgumentStackOverflowException;
+	public static native void argInt32(int v)
+		throws ArgumentStackOverflowException;
+	public static native void argInt64(long v)
+		throws ArgumentStackOverflowException;
+	public static native void argValue(Value v)
+		throws NullPointerException, // if `v` is null
+			ArgumentStackOverflowException;
 
 	/**
 	 * Stop the calling of a function and calls it.

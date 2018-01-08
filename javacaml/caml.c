@@ -12,7 +12,8 @@ static jclass
 	CallbackNotFoundException,
 	Value,
 	CamlException,
-	InvalidMethodIdException;
+	InvalidMethodIdException,
+	ArgumentStackOverflowException;
 
 static jmethodID
 	Callback_init,
@@ -22,7 +23,11 @@ static jfieldID
 	Callback_closure,
 	Value_value;
 
-#define IS_NULL(env, obj) ((*env)->IsSameObject(env, obj, NULL))
+#define IS_NULL(env, OBJ) ((*env)->IsSameObject(env, OBJ, NULL))
+#define THROW_NULLPTR(env, ARG_NAME) \
+		((*env)->ThrowNew(env, NullPointerException, \
+			"Called with null `" ARG_NAME "`"), \
+		(void)0)
 
 // Copy the content of `str` into a new OCaml string
 static value jstring_to_cstring(JNIEnv *env, jstring str)
@@ -39,6 +44,7 @@ static value jstring_to_cstring(JNIEnv *env, jstring str)
 // Value
 // juloo.javacaml.Value
 
+// Return the value pointed to by the Value `v`
 static value jvalue_get(JNIEnv *env, jobject v)
 {
 	long const v_ = (*env)->GetLongField(env, v, Value_value);
@@ -46,6 +52,7 @@ static value jvalue_get(JNIEnv *env, jobject v)
 	return *(value*)v_;
 }
 
+// Create a new Value object that point to `v`
 static jobject jvalue_new(JNIEnv *env, value v)
 {
 	value *const global = caml_stat_alloc(sizeof(value));
@@ -67,13 +74,12 @@ void Java_juloo_javacaml_Value_release(JNIEnv *env, jobject v)
 // Function calling
 // -
 // A stack is used to store the function and its arguments before calling it.
-// It is represented as an OCaml array, at rest, filled with Val_unit
+// It is represented as an OCaml array
 // -
-// The first element of the stack is the function to be called,
-// the remaining is its arguments
+// The first element of the stack is the function to call
 // -
-// A counter (`stack_size`) is used to keep track of the top of the stack
-// The stack is emptied after the call.
+// The counter `stack_size` is used to keep track of the top of the stack
+// The stack is emptied after a call.
 
 #define STACK_MAX_SIZE 16
 
@@ -108,30 +114,46 @@ static void init_arg_stack(void)
 
 void Java_juloo_javacaml_Caml_function__Ljuloo_javacaml_Value_2(JNIEnv *env, jclass c, jobject v)
 {
+	if (IS_NULL(env, v))
+		return THROW_NULLPTR(env, "function");
 	Store_field(stack, 0, jvalue_get(env, v));
 	stack_size = 1;
+	(void)c;
 }
 
 void Java_juloo_javacaml_Caml_function__Ljuloo_javacaml_Callback_2(JNIEnv *env, jclass c, jobject callback)
 {
-	long const func_ = (*env)->GetLongField(env, callback, Callback_closure);
-	value const func = *(value*)func_;
+	long func_;
+	value func;
 
+	if (IS_NULL(env, callback))
+		return THROW_NULLPTR(env, "callback");
+	func_ = (*env)->GetLongField(env, callback, Callback_closure);
+	func = *(value*)func_;
 	Store_field(stack, 0, func);
 	stack_size = 1;
+	(void)c;
 }
 
 void Java_juloo_javacaml_Caml_method(JNIEnv *env, jclass c, jobject v, jint method_id)
 {
-	value const obj = jvalue_get(env, v);
-	value const method = caml_get_public_method(obj, method_id);
+	value obj;
+	value method;
 
+	if (IS_NULL(env, v))
+		return THROW_NULLPTR(env, "object");
+	obj = jvalue_get(env, v);
+	method = caml_get_public_method(obj, method_id);
 	if (method == 0)
+	{
 		(*env)->ThrowNew(env, InvalidMethodIdException,
 				"Method id does not reference any method");
+		return ;
+	}
 	Store_field(stack, 0, method);
 	Store_field(stack, 1, obj);
 	stack_size = 2;
+	(void)c;
 }
 
 // Generate a Caml.arg##NAME function
@@ -139,18 +161,30 @@ void Java_juloo_javacaml_Caml_method(JNIEnv *env, jclass c, jobject v, jint meth
 #define ARG(NAME, TYPE, CONVERT) \
 void Java_juloo_javacaml_Caml_arg##NAME(JNIEnv *env, jclass c, TYPE v) \
 { \
+	if (stack_size >= STACK_MAX_SIZE) \
+	{ \
+		(*env)->ThrowNew(env, ArgumentStackOverflowException, "Overflow"); \
+		return ; \
+	} \
 	Store_field(stack, stack_size, CONVERT(env, v)); \
 	stack_size++; \
+	(void)c; \
 }
 
-#define ARG_TO_UNIT(env, v)		Val_unit
+// a little hack to throw a NullPointerException if the argument is null
+#define CHECK_NULLPTR(env, v, conv) (IS_NULL(env, v) ? \
+		(THROW_NULLPTR(env, "argument"), \
+		stack_size--, \
+		Val_unit) : conv(env, v))
+
+#define ARG_TO_UNIT(env, v)		((void)v, Val_unit)
 #define ARG_TO_INT(env, v)		Val_long(v)
 #define ARG_TO_FLOAT(env, v)	caml_copy_double(v)
-#define ARG_TO_STRING(env, v)	jstring_to_cstring(env, v)
+#define ARG_TO_STRING(env, v)	CHECK_NULLPTR(env, v, jstring_to_cstring)
 #define ARG_TO_BOOL(env, v)		Val_bool(v)
 #define ARG_TO_INT32(env, v)	caml_copy_int32(v)
 #define ARG_TO_INT64(env, v)	caml_copy_int64(v)
-#define ARG_TO_VALUE(env, v)	jvalue_get(env, v)
+#define ARG_TO_VALUE(env, v)	CHECK_NULLPTR(env, v, jvalue_get)
 ARG(Unit, int /* dummy */, ARG_TO_UNIT)
 ARG(Int, jint, ARG_TO_INT)
 ARG(Float, jdouble, ARG_TO_FLOAT)
@@ -182,6 +216,7 @@ TYPE Java_juloo_javacaml_Caml_call##NAME(JNIEnv *env, jclass c) \
 		return DUMMY; \
 	} \
 	return CONVERT(env, result); \
+	(void)c; \
 }
 
 #define CALL_OF_UNIT(env, v)	(void)0
@@ -206,30 +241,20 @@ CALL(Value, jobject, CALL_OF_VALUE, NULL)
 // ========================================================================== //
 // getCallback
 
-static value *get_named_value(JNIEnv *env, jstring name)
+jobject Java_juloo_javacaml_Caml_getCallback(JNIEnv *env, jclass c, jstring name)
 {
-	char const *const name_utf = (*env)->GetStringUTFChars(env, name, NULL);
+	char const *name_utf;
 	value *closure;
 
+	if (IS_NULL(env, name))
+		return THROW_NULLPTR(env, "name"), NULL;
+	name_utf = (*env)->GetStringUTFChars(env, name, NULL);
 	closure = caml_named_value(name_utf);
 	if (closure == NULL)
 		(*env)->ThrowNew(env, CallbackNotFoundException, name_utf);
 	(*env)->ReleaseStringUTFChars(env, name, name_utf);
-	return closure;
-}
-
-jobject Java_juloo_javacaml_Caml_getCallback(JNIEnv *env, jclass c, jstring name)
-{
-	value *closure;
-
-	if (IS_NULL(env, name))
-	{
-		(*env)->ThrowNew(env, NullPointerException, "Called with null `name`");
-		return 0;
-	}
-	closure = get_named_value(env, name);
 	if (closure == NULL)
-		return 0; // dummy
+		return NULL; // dummy
 	return (*env)->NewObject(env, Callback, Callback_init, (jlong)closure);
 	(void)c;
 }
@@ -243,14 +268,12 @@ jlong Java_juloo_javacaml_Caml_hashVariant(JNIEnv *env, jclass c, jstring varian
 	value hash;
 
 	if (IS_NULL(env, variantName))
-	{
-		(*env)->ThrowNew(env, NullPointerException, "Called with null `variantName`");
-		return 0;
-	}
+		return THROW_NULLPTR(env, "variantName"), 0;
 	name_utf = (*env)->GetStringUTFChars(env, variantName, NULL);
 	hash = caml_hash_variant(name_utf);
 	(*env)->ReleaseStringUTFChars(env, variantName, name_utf);
 	return (jlong)hash;
+	(void)c;
 }
 
 // ========================================================================== //
@@ -280,19 +303,13 @@ static int init_classes(JNIEnv *env)
 	F(Value, value, "J");
 	C("juloo/javacaml/", CamlException);
 	C("juloo/javacaml/", InvalidMethodIdException);
+	C("juloo/javacaml/", ArgumentStackOverflowException);
 
 #undef C
 #undef I
 #undef F
 #undef DEF
 	return 1;
-}
-
-void Java_juloo_javacaml_Caml_init(JNIEnv *env, jclass c)
-{
-	if (!init_classes(env))
-		return ;
-	(void)c;
 }
 
 void Java_juloo_javacaml_Caml_startup(JNIEnv *env, jclass c)
