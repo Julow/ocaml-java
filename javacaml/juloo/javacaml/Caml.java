@@ -52,6 +52,15 @@ public class Caml
 	public static native void function(Callback callback);
 
 	/**
+	 * Begin the calling of a method
+	 * Same as function() but for an object's method
+	 * `methodId` can be obtained with `hasVariant`
+	 */
+	public static native void method(Value object, int methodId)
+		throws InvalidMethodIdException;
+			// if `methodId` does not refer to any object's method
+
+	/**
 	 * Adds an argument onto the argument stack
 	 *
 	 * | Function		| Java type		| OCaml type

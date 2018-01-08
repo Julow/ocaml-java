@@ -11,7 +11,8 @@ static jclass
 	Callback,
 	CallbackNotFoundException,
 	Value,
-	CamlException;
+	CamlException,
+	InvalidMethodIdException;
 
 static jmethodID
 	Callback_init,
@@ -118,6 +119,19 @@ void Java_juloo_javacaml_Caml_function__Ljuloo_javacaml_Callback_2(JNIEnv *env, 
 
 	Store_field(stack, 0, func);
 	stack_size = 1;
+}
+
+void Java_juloo_javacaml_Caml_method(JNIEnv *env, jclass c, jobject v, jint method_id)
+{
+	value const obj = jvalue_get(env, v);
+	value const method = caml_get_public_method(obj, method_id);
+
+	if (method == 0)
+		(*env)->ThrowNew(env, InvalidMethodIdException,
+				"Method id does not reference any method");
+	Store_field(stack, 0, method);
+	Store_field(stack, 1, obj);
+	stack_size = 2;
 }
 
 // Generate a Caml.arg##NAME function
@@ -265,6 +279,7 @@ static int init_classes(JNIEnv *env)
 	I(Value, "(J)V");
 	F(Value, value, "J");
 	C("juloo/javacaml/", CamlException);
+	C("juloo/javacaml/", InvalidMethodIdException);
 
 #undef C
 #undef I
