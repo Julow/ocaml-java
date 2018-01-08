@@ -8,15 +8,15 @@
 
 static jclass
 	NullPointerException,
-	NamedValue,
-	NamedValueNotFoundException,
+	Callback,
+	CallbackNotFoundException,
 	CamlException;
 
 static jmethodID
-	NamedValue_init;
+	Callback_init;
 
 static jfieldID
-	NamedValue_closure;
+	Callback_closure;
 
 #define IS_NULL(env, obj) ((*env)->IsSameObject(env, obj, NULL))
 
@@ -74,9 +74,18 @@ static void init_arg_stack(void)
 	caml_register_global_root(&stack);
 }
 
-void Java_juloo_javacaml_Caml_function(JNIEnv *env, jclass c, jlong func)
+void Java_juloo_javacaml_Caml_function__J(JNIEnv *env, jclass c, jlong func)
 {
 	Store_field(stack, 0, (value)func);
+	stack_size = 1;
+}
+
+void Java_juloo_javacaml_Caml_function__Ljuloo_javacaml_Caml_00024Callback_2(JNIEnv *env, jclass c, jobject callback)
+{
+	long const func_ = (*env)->GetLongField(env, callback, Callback_closure);
+	value const func = *(value*)func_;
+
+	Store_field(stack, 0, func);
 	stack_size = 1;
 }
 
@@ -146,7 +155,7 @@ CALL(Int64, jlong, CALL_OF_INT64, 0)
 #undef CALL
 
 // ========================================================================== //
-// getNamedValue
+// getCallback
 
 static value *get_named_value(JNIEnv *env, jstring name)
 {
@@ -155,12 +164,12 @@ static value *get_named_value(JNIEnv *env, jstring name)
 
 	closure = caml_named_value(name_utf);
 	if (closure == NULL)
-		(*env)->ThrowNew(env, NamedValueNotFoundException, name_utf);
+		(*env)->ThrowNew(env, CallbackNotFoundException, name_utf);
 	(*env)->ReleaseStringUTFChars(env, name, name_utf);
 	return closure;
 }
 
-jobject Java_juloo_javacaml_Caml_getNamedValue(JNIEnv *env, jclass c, jstring name)
+jobject Java_juloo_javacaml_Caml_getCallback(JNIEnv *env, jclass c, jstring name)
 {
 	value *closure;
 
@@ -172,14 +181,8 @@ jobject Java_juloo_javacaml_Caml_getNamedValue(JNIEnv *env, jclass c, jstring na
 	closure = get_named_value(env, name);
 	if (closure == NULL)
 		return 0; // dummy
-	return (*env)->NewObject(env, NamedValue, NamedValue_init, (jlong)closure);
+	return (*env)->NewObject(env, Callback, Callback_init, (jlong)closure);
 	(void)c;
-}
-
-jlong Java_juloo_javacaml_Caml_00024NamedValue_get(JNIEnv *env, jobject obj)
-{
-	jlong const c = (*env)->GetLongField(env, obj, NamedValue_closure);
-	return (jlong)*(value*)c;
 }
 
 // ========================================================================== //
@@ -219,10 +222,10 @@ static int init_classes(JNIEnv *env)
 #define F(CLASS, NAME, SIG) DEF(CLASS##_##NAME, GetFieldID, CLASS, #NAME, SIG)
 
 	C("java/lang/", NullPointerException);
-	C("juloo/javacaml/Caml$", NamedValue);
-	I(NamedValue, "(J)V");
-	F(NamedValue, closure, "J");
-	C("juloo/javacaml/Caml$", NamedValueNotFoundException);
+	C("juloo/javacaml/Caml$", Callback);
+	I(Callback, "(J)V");
+	F(Callback, closure, "J");
+	C("juloo/javacaml/Caml$", CallbackNotFoundException);
 	C("juloo/javacaml/Caml$", CamlException);
 
 #undef C

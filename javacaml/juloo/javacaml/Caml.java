@@ -1,5 +1,9 @@
 package juloo.javacaml;
 
+/**
+ * Interfaces OCaml
+ * Unsafe
+ */
 public class Caml
 {
 	private Caml() {}
@@ -22,9 +26,9 @@ public class Caml
 	 *
 	 * > `caml_named_value`
 	 */
-	public static native NamedValue getNamedValue(String name)
+	public static native Callback getCallback(String name)
 		throws NullPointerException, // if `name` is null
-			NamedValueNotFoundException; // if `name` is not registered
+			CallbackNotFoundException; // if `name` is not registered
 
 	/**
 	 * Returns the hash value corresponding
@@ -40,13 +44,12 @@ public class Caml
 	/**
 	 * Begin the calling of a function
 	 *
-	 * This function begins the calling of a function
-	 *
-	 * Use the `arg<Type>` functions to push the arguments
-	 *
-	 * Then, call the function with the `call_`* functions
+	 * To call a function:
+	 *  Caml.arg<Type>: Push an argument
+	 *  Caml.call<Type>: Perform the call and collect the result
 	 */
 	public static native void function(long value);
+	public static native void function(Callback callback);
 
 	/**
 	 * Adds an argument onto the argument stack
@@ -84,21 +87,19 @@ public class Caml
 	public static native long callInt64() throws CamlException;
 
 	/**
-	 * Class that hold the value returned by get_value
-	 * The `get` method returns the expected value
+	 * Class that hold the value returned by getCallback
 	 */
-	public static class NamedValue
+	public static class Callback
 	{
 		private long closure;
-		protected NamedValue(long c) { closure = c; }
-		public native long get();
+		private Callback(long c) { closure = c; }
 	}
 
-	public static class NamedValueNotFoundException extends Exception
+	public static class CallbackNotFoundException extends Exception
 	{
-		public NamedValueNotFoundException(String name)
+		public CallbackNotFoundException(String name)
 		{
-			super("Named value `" + name + "` not found");
+			super("Callback `" + name + "` not found");
 		}
 	}
 
