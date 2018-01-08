@@ -48,7 +48,7 @@ public class Caml
 	 *  Caml.arg<Type>: Push an argument
 	 *  Caml.call<Type>: Perform the call and collect the result
 	 */
-	public static native void function(long value);
+	public static native void function(Value function);
 	public static native void function(Callback callback);
 
 	/**
@@ -63,6 +63,7 @@ public class Caml
 	 * | argBool		| boolean		| bool
 	 * | argInt32		| int			| int32
 	 * | argInt64		| long			| int64
+	 * | argValue		| Value			| *
 	 */
 	public static native void argUnit();
 	public static native void argInt(int v);
@@ -71,6 +72,7 @@ public class Caml
 	public static native void argBool(boolean v);
 	public static native void argInt32(int v);
 	public static native void argInt64(long v);
+	public static native void argValue(Value v);
 
 	/**
 	 * Stop the calling of a function and calls it.
@@ -85,4 +87,5 @@ public class Caml
 	public static native boolean callBool() throws CamlException;
 	public static native int callInt32() throws CamlException;
 	public static native long callInt64() throws CamlException;
+	public static native Value callValue() throws CamlException;
 }

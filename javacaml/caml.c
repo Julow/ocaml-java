@@ -10,13 +10,16 @@ static jclass
 	NullPointerException,
 	Callback,
 	CallbackNotFoundException,
+	Value,
 	CamlException;
 
 static jmethodID
-	Callback_init;
+	Callback_init,
+	Value_init;
 
 static jfieldID
-	Callback_closure;
+	Callback_closure,
+	Value_value;
 
 #define IS_NULL(env, obj) ((*env)->IsSameObject(env, obj, NULL))
 
@@ -29,6 +32,34 @@ static value jstring_to_cstring(JNIEnv *env, jstring str)
 	cstr = caml_copy_string(str_utf);
 	(*env)->ReleaseStringUTFChars(env, str, str_utf);
 	return cstr;
+}
+
+// ========================================================================== //
+// Value
+// juloo.javacaml.Value
+
+static value jvalue_get(JNIEnv *env, jobject v)
+{
+	long const v_ = (*env)->GetLongField(env, v, Value_value);
+
+	return *(value*)v_;
+}
+
+static jobject jvalue_new(JNIEnv *env, value v)
+{
+	value *const global = caml_stat_alloc(sizeof(value));
+
+	caml_register_global_root(global);
+	*global = v;
+	return (*env)->NewObject(env, Value, Value_init, (jlong)global);
+}
+
+void Java_juloo_javacaml_Value_release(JNIEnv *env, jobject v)
+{
+	long const v_ = (*env)->GetLongField(env, v, Value_value);
+	value *const global = (value*)v_;
+
+	caml_remove_global_root(global);
 }
 
 // ========================================================================== //
@@ -74,9 +105,9 @@ static void init_arg_stack(void)
 	caml_register_global_root(&stack);
 }
 
-void Java_juloo_javacaml_Caml_function__J(JNIEnv *env, jclass c, jlong func)
+void Java_juloo_javacaml_Caml_function__Ljuloo_javacaml_Value_2(JNIEnv *env, jclass c, jobject v)
 {
-	Store_field(stack, 0, (value)func);
+	Store_field(stack, 0, jvalue_get(env, v));
 	stack_size = 1;
 }
 
@@ -105,6 +136,7 @@ void Java_juloo_javacaml_Caml_arg##NAME(JNIEnv *env, jclass c, TYPE v) \
 #define ARG_TO_BOOL(env, v)		Val_bool(v)
 #define ARG_TO_INT32(env, v)	caml_copy_int32(v)
 #define ARG_TO_INT64(env, v)	caml_copy_int64(v)
+#define ARG_TO_VALUE(env, v)	jvalue_get(env, v)
 ARG(Unit, int /* dummy */, ARG_TO_UNIT)
 ARG(Int, jint, ARG_TO_INT)
 ARG(Float, jdouble, ARG_TO_FLOAT)
@@ -112,6 +144,7 @@ ARG(String, jstring, ARG_TO_STRING)
 ARG(Bool, jboolean, ARG_TO_BOOL)
 ARG(Int32, jint, ARG_TO_INT32)
 ARG(Int64, jlong, ARG_TO_INT64)
+ARG(Value, jobject, ARG_TO_VALUE)
 
 #undef ARG
 
@@ -144,6 +177,7 @@ TYPE Java_juloo_javacaml_Caml_call##NAME(JNIEnv *env, jclass c) \
 #define CALL_OF_BOOL(env, v)	Bool_val(v)
 #define CALL_OF_INT32(env, v)	Int32_val(v)
 #define CALL_OF_INT64(env, v)	Int64_val(v)
+#define CALL_OF_VALUE(env, v)	jvalue_new(env, v)
 CALL(Unit, void, CALL_OF_UNIT,)
 CALL(Int, jint, CALL_OF_INT, 0)
 CALL(Float, jdouble, CALL_OF_FLOAT, 0.0)
@@ -151,6 +185,7 @@ CALL(String, jstring, CALL_OF_STRING, NULL)
 CALL(Bool, jboolean, CALL_OF_BOOL, 0)
 CALL(Int32, jint, CALL_OF_INT32, 0)
 CALL(Int64, jlong, CALL_OF_INT64, 0)
+CALL(Value, jobject, CALL_OF_VALUE, NULL)
 
 #undef CALL
 
@@ -226,6 +261,9 @@ static int init_classes(JNIEnv *env)
 	I(Callback, "(J)V");
 	F(Callback, closure, "J");
 	C("juloo/javacaml/", CallbackNotFoundException);
+	C("juloo/javacaml/", Value);
+	I(Value, "(J)V");
+	F(Value, value, "J");
 	C("juloo/javacaml/", CamlException);
 
 #undef C
