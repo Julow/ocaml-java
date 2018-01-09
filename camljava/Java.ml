@@ -44,8 +44,7 @@ struct
 
 	(** `member_method cls name sgt` returns the method
 			named `name` with signature `sgt`
-		Raises `Not_found` if the method does not exists with this signature
-		Raises `Invalid_argument` if the first argument is `null` *)
+		Raises `Not_found` if the method does not exists with this signature *)
 	external member_method : t -> string -> string -> member_method = "ocaml_java__member_method"
 
 	(** Same as `member_method`, for static methods *)
@@ -59,8 +58,7 @@ struct
 
 	(** `member_field cls name sgt` returns the field named `name`
 			with signature `sgt`
-		Raises `Not_found` if the field does not exists with this signature
-		Raises `Invalid_argument` if the first argument is `null` *)
+		Raises `Not_found` if the field does not exists with this signature *)
 	external member_field : t -> string -> string -> member_field = "ocaml_java__member_field"
 
 	(** Same as `member_field`, for static fields *)
