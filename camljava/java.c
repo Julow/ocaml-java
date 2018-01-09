@@ -5,6 +5,7 @@
 #include <caml/memory.h>
 #include <caml/fail.h>
 #include <caml/custom.h>
+#include <caml/alloc.h>
 
 #define JNI_VERSION JNI_VERSION_1_4
 
@@ -67,6 +68,8 @@ static value alloc_java_obj(jobject object)
 /*
 ** ========================================================================== **
 ** Class
+** -
+** Method Ids are represented as nativeint
 */
 
 value ocaml_java__find_class(value name)
@@ -77,6 +80,76 @@ value ocaml_java__find_class(value name)
 	if (c == NULL)
 		caml_raise_not_found();
 	return alloc_java_obj(c);
+}
+
+static value get_method(jobject class_, char const *name, char const *sig)
+{
+	jmethodID id;
+
+	id = (*env)->GetMethodID(env, class_, name, sig);
+	if (id == NULL)
+		caml_raise_not_found();
+	return caml_copy_nativeint((intnat)id);
+}
+
+value ocaml_java__member_method(value class_, value name, value sig)
+{
+	if (class_ == Java_null_val)
+		caml_invalid_argument("Java.Class.member_method: class is `null`");
+	return get_method(Java_obj_val(class_), String_val(name), String_val(sig));
+}
+
+value ocaml_java__static_method(value class_, value name, value sig)
+{
+	jmethodID id;
+
+	if (class_ == Java_null_val)
+		caml_invalid_argument("Java.Class.static_method: class is `null`");
+	id = (*env)->GetStaticMethodID(env, Java_obj_val(class_),
+			String_val(name), String_val(sig));
+	if (id == NULL)
+		caml_raise_not_found();
+	return caml_copy_nativeint((intnat)id);
+}
+
+value ocaml_java__virtual_method(value class_, value name, value sig)
+{
+	if (class_ == Java_null_val)
+		caml_invalid_argument("Java.Class.virtual_method: class is `null`");
+	return get_method(Java_obj_val(class_), String_val(name), String_val(sig));
+}
+
+value ocaml_java__init_method(value class_, value sig)
+{
+	if (class_ == Java_null_val)
+		caml_invalid_argument("Java.Class.init_method: class is `null`");
+	return get_method(Java_obj_val(class_), "<init>", String_val(sig));
+}
+
+value ocaml_java__member_field(value class_, value name, value sig)
+{
+	jfieldID id;
+
+	if (class_ == Java_null_val)
+		caml_invalid_argument("Java.Class.member_field: class is `null`");
+	id = (*env)->GetFieldID(env, Java_obj_val(class_),
+			String_val(name), String_val(sig));
+	if (id == NULL)
+		caml_raise_not_found();
+	return caml_copy_nativeint((intnat)id);
+}
+
+value ocaml_java__static_field(value class_, value name, value sig)
+{
+	jfieldID id;
+
+	if (class_ == Java_null_val)
+		caml_invalid_argument("Java.Class.static_field: class is `null`");
+	id = (*env)->GetStaticFieldID(env, Java_obj_val(class_),
+			String_val(name), String_val(sig));
+	if (id == NULL)
+		caml_raise_not_found();
+	return caml_copy_nativeint((intnat)id);
 }
 
 /*
