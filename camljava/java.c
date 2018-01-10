@@ -11,6 +11,17 @@
 
 static JNIEnv *env;
 
+// Copy the content of `str` into a new OCaml string
+static value jstring_to_cstring(JNIEnv *env, jstring str)
+{
+	char const *const str_utf = (*env)->GetStringUTFChars(env, str, NULL);
+	value cstr;
+
+	cstr = caml_copy_string(str_utf);
+	(*env)->ReleaseStringUTFChars(env, str, str_utf);
+	return cstr;
+}
+
 /*
 ** ========================================================================== **
 ** OCaml value that represent a `jobject` pointer or the `null` value
@@ -145,10 +156,13 @@ value ocaml_java__arg_int(value v)
 	return Val_unit;
 }
 
-#define P_INIT_FAIL(NAME) \
-	caml_failwith("Java.call_" #NAME ": only call_obj can be used with init_method");
+#define P_INIT_FAIL(v) \
+	(caml_failwith("only call_obj can be used with init_method"), Val_unit)
 
-#define CALL(NAME, MNAME, CONV, P_INIT) \
+// Generate a Java.call_ function with name `NAME`
+// `CONV` is the function that convert from the java type to `value`
+// `P_INIT_CONV` can be used to disable the `PERFORM_INIT` case
+#define CALL(NAME, MNAME, CONV, P_INIT_CONV) \
 value ocaml_java__call_##NAME(value unit)							\
 {																	\
 	switch (perform_type)											\
@@ -170,8 +184,7 @@ value ocaml_java__call_##NAME(value unit)							\
 			(jmethodID)	arg_stack[1].l,								\
 						arg_stack + 2));							\
 	case PERFORM_INIT:												\
-		P_INIT														\
-		return CONV((*env)->NewObjectA(env,							\
+		return P_INIT_CONV((*env)->NewObjectA(env,					\
 			(jclass)	arg_stack[0].l,								\
 			(jmethodID)	arg_stack[1].l,								\
 						arg_stack + 2));							\
@@ -179,8 +192,20 @@ value ocaml_java__call_##NAME(value unit)							\
 	return Val_unit;												\
 }
 
-CALL(int, Int, Val_long, P_INIT_FAIL(int))
-CALL(obj, Object, alloc_java_obj,)
+#define CONV_UNIT(v)	((v), Val_unit)
+#define CONV_STRING(v)	(jstring_to_cstring(env, (jstring)(v)))
+CALL(unit, Void, CONV_UNIT, P_INIT_FAIL)
+CALL(int, Int, Val_long, P_INIT_FAIL)
+CALL(float, Float, caml_copy_double, P_INIT_FAIL)
+CALL(double, Double, caml_copy_double, P_INIT_FAIL)
+CALL(string, Object, CONV_STRING, P_INIT_FAIL)
+CALL(bool, Boolean, Val_bool, P_INIT_FAIL)
+CALL(char, Char, Val_int, P_INIT_FAIL)
+CALL(int8, Byte, Val_int, P_INIT_FAIL)
+CALL(int16, Short, Val_int, P_INIT_FAIL)
+CALL(int32, Int, caml_copy_int32, P_INIT_FAIL)
+CALL(int64, Long, caml_copy_int64, P_INIT_FAIL)
+CALL(obj, Object, alloc_java_obj, alloc_java_obj)
 
 #undef CALL
 

@@ -80,6 +80,16 @@ end
 	| Function		| OCaml type	| Java type
 	| ---			| ---			| ---
 	| arg_int		| int			| int
+	| arg_float		| float			| float
+	| arg_double	| float			| double
+	| arg_string	| string		| String
+	| arg_bool		| bool			| boolean
+	| arg_char		| char			| char
+	| arg_byte		| int			| byte
+	| arg_short		| int			| short
+	| arg_int32		| int32			| int
+	| arg_int64		| int64			| long
+	| arg_obj		| Java.obj		| Object
 	-
 	Call the function and get the result with the `call_`* functions *)
 
@@ -104,5 +114,15 @@ external arg_int : int -> unit = "ocaml_java__arg_int"
 
 (** Calls the function and returns the result
 	Same convertion as for the `arg_` functions *)
+external call_unit : unit -> unit = "ocaml_java__call_unit"
 external call_int : unit -> int = "ocaml_java__call_int"
+external call_float : unit -> float = "ocaml_java__call_float"
+external call_double : unit -> float = "ocaml_java__call_double"
+external call_string : unit -> string = "ocaml_java__call_string"
+external call_bool : unit -> bool = "ocaml_java__call_bool"
+external call_char : unit -> char = "ocaml_java__call_char"
+external call_int8 : unit -> int = "ocaml_java__call_int8"
+external call_int16 : unit -> int = "ocaml_java__call_int16"
+external call_int32 : unit -> int32 = "ocaml_java__call_int32"
+external call_int64 : unit -> int64 = "ocaml_java__call_int64"
 external call_obj : unit -> obj = "ocaml_java__call_obj"
