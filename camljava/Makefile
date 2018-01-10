@@ -21,7 +21,10 @@ libcamljava.a: java_stubs.o
 %.o: %.c
 	$(OCAMLOPT) -c -ccopt "$(CCFLAGS)" -o $@ $<
 
-%.cmx: %.ml
+%.cmi: %.mli
+	$(OCAMLOPT) -c -o $@ $<
+
+%.cmx: %.ml %.cmi
 	$(OCAMLOPT) -c -o $@ $<
 
 clean:
