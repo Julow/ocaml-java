@@ -10,18 +10,16 @@ let null : obj = (Obj.magic 0)
 
 (** Methods and fields
 	There is a type for each type of method/field
-	member_method	(nonvirtual) Member method
-	static_method	Static method
-	virtual_method	Member method through inheritance
-	init_method		Object constructor
-	member_field	Object attribute
-	static_field	Static field *)
-type member_method
-type static_method
-type virtual_method
-type init_method
-type member_field
-type static_field
+	meth				Member method
+	meth_static			Static method
+	meth_constructor	Object constructor
+	field				Object attribute
+	field_static		Static field *)
+type meth
+type meth_static
+type meth_constructor
+type field
+type field_static
 
 (** Spawn a JVM and initialise the library
 	Takes an array of JVM options *)
@@ -42,38 +40,39 @@ struct
 		Raises `Not_found` if the class does not exists *)
 	external find_class : string -> t = "ocaml_java__find_class"
 
-	(** `member_method cls name sgt` returns the method
+	(** `get_meth cls name sgt` returns the method
 			named `name` with signature `sgt`
 		Raises `Not_found` if the method does not exists with this signature *)
-	external member_method : t -> string -> string -> member_method = "ocaml_java__member_method"
+	external get_meth : t -> string -> string -> meth =
+		"ocaml_java__class_get_meth"
 
-	(** Same as `member_method`, for static methods *)
-	external static_method : t -> string -> string -> static_method = "ocaml_java__static_method"
+	(** Same as `get_meth`, for static methods *)
+	external get_meth_static : t -> string -> string -> meth_static =
+		"ocaml_java__class_get_meth_static"
 
-	(** Same as `member_method`, for virtual member methods *)
-	external virtual_method : t -> string -> string -> virtual_method = "ocaml_java__virtual_method"
+	(** Same as `get_meth`, for object constructor *)
+	external get_constructor : t -> string -> meth_constructor =
+		"ocaml_java__class_get_constructor"
 
-	(** Same as `member_method` with name `"<init>"` *)
-	external init_method : t -> string -> init_method = "ocaml_java__init_method"
-
-	(** `member_field cls name sgt` returns the field named `name`
+	(** `get_field cls name sgt` returns the field named `name`
 			with signature `sgt`
 		Raises `Not_found` if the field does not exists with this signature *)
-	external member_field : t -> string -> string -> member_field = "ocaml_java__member_field"
+	external get_field : t -> string -> string -> field =
+		"ocaml_java__class_get_field"
 
-	(** Same as `member_field`, for static fields *)
-	external static_field : t -> string -> string -> static_field = "ocaml_java__static_field"
+	(** Same as `get_field`, for static fields *)
+	external get_field_static : t -> string -> string -> field_static =
+		"ocaml_java__class_get_field_static"
 
 end
 
 (** Calling a function
 	-
 	Begins the calling of a function with a call to one of:
-		- `member_method obj class_ meth` to call a nonvirtual method
-		- `static_method class_ meth` to call a static method
-		- `virtual_method obj meth` to call an instance method
-		- `init_method class_ meth` to instantiate a new object
-				(must be called with call_obj)
+		- `meth obj meth`
+		- `meth_static class_ meth`
+		- `meth_nonvirtual obj class_ meth`
+		- `new_ class_ init`
 	-
 	Push arguments using the `arg_`* functions
 	-
@@ -93,21 +92,22 @@ end
 	-
 	Call the function and get the result with the `call_`* functions *)
 
-(** `member_method object meth` Begins the calling of the method `meth`
-		of the object `object`
+(** Begins the calling of a method
 	Raises `Invalid_argument` if `object` is null *)
-external member_method : obj -> Class.t -> member_method -> unit = "ocaml_java__calling_member_method"
+external meth : obj -> meth -> unit = "ocaml_java__calling_meth"
 
-(** Same as `member_method`, for static methods *)
-external static_method : Class.t -> static_method -> unit = "ocaml_java__calling_static_method"
+(** Same as `meth` for static methods *)
+external meth_static : Class.t -> meth_static -> unit =
+	"ocaml_java__calling_meth_static"
 
-(** Same as `member_method`, for virtual methods *)
-external virtual_method : obj -> virtual_method -> unit = "ocaml_java__calling_virtual_method"
+(** Same as `meth` for non-virtual call
+	Call the method of a specific class instead of the class of the object *)
+external meth_nonvirtual : obj -> Class.t -> meth -> unit =
+	"ocaml_java__calling_meth_nonvirtual"
 
-(** Same as `member_method`, for init methods
-	Must be called with `call_obj`,
-	other call functions will raise `Failure` *)
-external init_method : Class.t -> init_method -> unit = "ocaml_java__calling_init_method"
+(** Begin the calling of an object constructor
+	Must be called with `call_obj` to retrieve the object *)
+external new_ : Class.t -> meth_constructor -> unit = "ocaml_java__calling_init"
 
 (** Adds an argument on the stack *)
 external arg_int : int -> unit = "ocaml_java__arg_int"

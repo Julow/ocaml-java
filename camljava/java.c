@@ -127,19 +127,18 @@ static void clear_local_refs(void)
 
 // Calling
 
-value ocaml_java__calling_member_method(value obj, value class_, value meth)
+value ocaml_java__calling_meth(value obj, value meth)
 {
 	if (obj == Java_null_val)
-		caml_invalid_argument("Java.member_method: `object` is null");
+		caml_invalid_argument("Java.meth: `object` is null");
 	arg_stack[0].l = Java_obj_val(obj);
-	arg_stack[1].l = Java_obj_val(class_);
-	arg_stack[2].l = (jobject)Nativeint_val(meth);
-	arg_count = 3;
-	perform_type = PERFORM_NONVIRTUAL_CALL;
+	arg_stack[1].l = (jobject)Nativeint_val(meth);
+	arg_count = 2;
+	perform_type = PERFORM_CALL;
 	return Val_unit;
 }
 
-value ocaml_java__calling_static_method(value class_, value meth)
+value ocaml_java__calling_meth_static(value class_, value meth)
 {
 	arg_stack[0].l = Java_obj_val(class_);
 	arg_stack[1].l = (jobject)Nativeint_val(meth);
@@ -148,18 +147,19 @@ value ocaml_java__calling_static_method(value class_, value meth)
 	return Val_unit;
 }
 
-value ocaml_java__calling_virtual_method(value obj, value meth)
+value ocaml_java__calling_meth_nonvirtual(value obj, value class_, value meth)
 {
 	if (obj == Java_null_val)
-		caml_invalid_argument("Java.virtual_method: `object` is null");
+		caml_invalid_argument("Java.meth_nonvirtual: `object` is null");
 	arg_stack[0].l = Java_obj_val(obj);
-	arg_stack[1].l = (jobject)Nativeint_val(meth);
-	arg_count = 2;
-	perform_type = PERFORM_CALL;
+	arg_stack[1].l = Java_obj_val(class_);
+	arg_stack[2].l = (jobject)Nativeint_val(meth);
+	arg_count = 3;
+	perform_type = PERFORM_NONVIRTUAL_CALL;
 	return Val_unit;
 }
 
-value ocaml_java__calling_init_method(value class_, value meth)
+value ocaml_java__calling_init(value class_, value meth)
 {
 	arg_stack[0].l = Java_obj_val(class_);
 	arg_stack[1].l = (jobject)Nativeint_val(meth);
@@ -288,12 +288,12 @@ static value get_method(jobject class_, char const *name, char const *sig)
 	return caml_copy_nativeint((intnat)id);
 }
 
-value ocaml_java__member_method(value class_, value name, value sig)
+value ocaml_java__class_get_meth(value class_, value name, value sig)
 {
 	return get_method(Java_obj_val(class_), String_val(name), String_val(sig));
 }
 
-value ocaml_java__static_method(value class_, value name, value sig)
+value ocaml_java__class_get_meth_static(value class_, value name, value sig)
 {
 	jmethodID id;
 
@@ -304,17 +304,12 @@ value ocaml_java__static_method(value class_, value name, value sig)
 	return caml_copy_nativeint((intnat)id);
 }
 
-value ocaml_java__virtual_method(value class_, value name, value sig)
-{
-	return get_method(Java_obj_val(class_), String_val(name), String_val(sig));
-}
-
-value ocaml_java__init_method(value class_, value sig)
+value ocaml_java__class_get_constructor(value class_, value sig)
 {
 	return get_method(Java_obj_val(class_), "<init>", String_val(sig));
 }
 
-value ocaml_java__member_field(value class_, value name, value sig)
+value ocaml_java__class_get_field(value class_, value name, value sig)
 {
 	jfieldID id;
 
@@ -325,7 +320,7 @@ value ocaml_java__member_field(value class_, value name, value sig)
 	return caml_copy_nativeint((intnat)id);
 }
 
-value ocaml_java__static_field(value class_, value name, value sig)
+value ocaml_java__class_get_field_static(value class_, value name, value sig)
 {
 	jfieldID id;
 
