@@ -36,7 +36,7 @@ static value jstring_to_cstring(JNIEnv *env, jstring str)
 
 #define Java_obj_val(v)	(*(jobject*)Data_custom_val(v))
 
-#define Java_null_val	(Val_int(0))
+#define Java_null_val	(Val_long(0))
 
 static void java_obj_finalize(value v)
 {
@@ -149,12 +149,31 @@ value ocaml_java__calling_init_method(value class_, value meth)
 	return Val_unit;
 }
 
-value ocaml_java__arg_int(value v)
-{
-	arg_stack[arg_count].i = Long_val(v);
-	arg_count++;
-	return Val_unit;
+// Generate a Java.arg_ function with name `NAME`
+// `DST` is the field in jvalue
+// `CONV` is the function that convert from OCaml value to Java type
+//  it must not allocate on the Java heap
+#define ARG(NAME, DST, CONV) \
+value ocaml_java__arg_##NAME(value v)		\
+{											\
+	arg_stack[arg_count].DST = CONV(v);		\
+	arg_count++;							\
+	return Val_unit;						\
 }
+
+#define ARG_TO_OBJ(v) ((v == Java_null_val) ? NULL : Java_obj_val(v))
+ARG(int, i, Long_val)
+ARG(float, f, Double_val)
+ARG(double, d, Double_val)
+ARG(bool, z, Bool_val)
+ARG(char, c, Long_val)
+ARG(int8, b, Long_val)
+ARG(int16, s, Long_val)
+ARG(int32, i, Int32_val)
+ARG(int64, j, Int64_val)
+ARG(obj, l, ARG_TO_OBJ)
+
+#undef ARG
 
 #define P_INIT_FAIL(v) \
 	(caml_failwith("only call_obj can be used with init_method"), Val_unit)
@@ -200,9 +219,9 @@ CALL(float, Float, caml_copy_double, P_INIT_FAIL)
 CALL(double, Double, caml_copy_double, P_INIT_FAIL)
 CALL(string, Object, CONV_STRING, P_INIT_FAIL)
 CALL(bool, Boolean, Val_bool, P_INIT_FAIL)
-CALL(char, Char, Val_int, P_INIT_FAIL)
-CALL(int8, Byte, Val_int, P_INIT_FAIL)
-CALL(int16, Short, Val_int, P_INIT_FAIL)
+CALL(char, Char, Val_long, P_INIT_FAIL)
+CALL(int8, Byte, Val_long, P_INIT_FAIL)
+CALL(int16, Short, Val_long, P_INIT_FAIL)
 CALL(int32, Int, caml_copy_int32, P_INIT_FAIL)
 CALL(int64, Long, caml_copy_int64, P_INIT_FAIL)
 CALL(obj, Object, alloc_java_obj, alloc_java_obj)
