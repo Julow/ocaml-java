@@ -276,6 +276,7 @@ value ocaml_java__call_##NAME(value unit)							\
 	}																\
 	clear_local_refs();												\
 	return Val_unit;												\
+	(void)unit;														\
 }
 
 #define P_INIT_DISABLED(n) DISABLED("Java.new_: Java.call_" n)
