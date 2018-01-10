@@ -65,3 +65,44 @@ struct
 	external static_field : t -> string -> string -> static_field = "ocaml_java__static_field"
 
 end
+
+(** Calling a function
+	-
+	Begins the calling of a function with a call to one of:
+		- `member_method obj class_ meth` to call a nonvirtual method
+		- `static_method class_ meth` to call a static method
+		- `virtual_method obj meth` to call an instance method
+		- `init_method class_ meth` to instantiate a new object
+				(must be called with call_obj)
+	-
+	Push arguments using the `arg_`* functions
+	-
+	| Function		| OCaml type	| Java type
+	| ---			| ---			| ---
+	| arg_int		| int			| int
+	-
+	Call the function and get the result with the `call_`* functions *)
+
+(** `member_method object meth` Begins the calling of the method `meth`
+		of the object `object`
+	Raises `Invalid_argument` if `object` is null *)
+external member_method : obj -> Class.t -> member_method -> unit = "ocaml_java__calling_member_method"
+
+(** Same as `member_method`, for static methods *)
+external static_method : Class.t -> static_method -> unit = "ocaml_java__calling_static_method"
+
+(** Same as `member_method`, for virtual methods *)
+external virtual_method : obj -> virtual_method -> unit = "ocaml_java__calling_virtual_method"
+
+(** Same as `member_method`, for init methods
+	Must be called with `call_obj`,
+	other call functions will raise `Failure` *)
+external init_method : Class.t -> init_method -> unit = "ocaml_java__calling_init_method"
+
+(** Adds an argument on the stack *)
+external arg_int : int -> unit = "ocaml_java__arg_int"
+
+(** Calls the function and returns the result
+	Same convertion as for the `arg_` functions *)
+external call_int : unit -> int = "ocaml_java__call_int"
+external call_obj : unit -> obj = "ocaml_java__call_obj"
