@@ -1,7 +1,12 @@
 # -
 
+JAVACAML_DIR = ..
+
+JAVACAML_JAR = $(JAVACAML_DIR)/javacaml.jar
+JAVACAML_A = $(JAVACAML_DIR)/libjavacaml.a
+
 run: all
-	LD_LIBRARY_PATH=. java -ea -cp test.jar:../javacaml/javacaml.jar test.Test
+	LD_LIBRARY_PATH=. java -ea -cp test.jar:$(JAVACAML_JAR) test.Test
 
 all: | libs
 	make libtest.so test.jar
@@ -10,19 +15,19 @@ libtest.so: $(wildcard *.ml *.c)
 	ocamlfind ocamlopt -linkpkg -output-obj \
 		-runtime-variant _pic \
 		-ccopt "-shared" \
-		-cclib "-Wl,--whole-archive ../javacaml/libjavacaml.a -Wl,--no-whole-archive" \
+		-cclib "-Wl,--whole-archive $(JAVACAML_A) -Wl,--no-whole-archive" \
 		$^ -o $@
 
 test.jar: $(wildcard test/*.java)
-	javac -cp ../javacaml/javacaml.jar $^
+	javac -cp $(JAVACAML_JAR) $^
 	jar cf $@ test/*.class
 
 libs:
-	make -C ../javacaml
+	make -C $(JAVACAML_DIR)
 
 clean:
 	rm -f $(wildcard *.o *.cmo *.cmi *.cmx *.so *.jar test/*.class)
-	make -C ../javacaml clean
+	make -C $(JAVACAML_DIR) clean
 
 re: clean
 	make run

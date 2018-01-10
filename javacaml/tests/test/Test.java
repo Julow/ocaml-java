@@ -6,6 +6,7 @@ import juloo.javacaml.Value;
 import juloo.javacaml.CallbackNotFoundException;
 import juloo.javacaml.CamlException;
 import juloo.javacaml.InvalidMethodIdException;
+import java.util.ArrayList;
 
 public class Test
 {

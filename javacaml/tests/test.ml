@@ -1,3 +1,5 @@
+let print_endline s = ()
+
 let test_obj = object
 	method test = print_endline "OCaml method called"
 	method test_int a b = a + b

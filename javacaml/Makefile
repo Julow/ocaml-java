@@ -1,7 +1,9 @@
 # -
 
 OCAML_WHERE := $(shell ocamlc -where)
-CCINCLUDES = -I "$(NDK_PLATFORM)/usr/include" -I "$(OCAML_WHERE)"
+CCINCLUDES = -I "$(JAVA_HOME)/include" \
+	-I "$(JAVA_HOME)/include/linux" \
+	-I "$(OCAML_WHERE)"
 CCFLAGS = -Wall -Wextra -O2 -fPIC $(CCINCLUDES)
 
 JAVAC = javac
