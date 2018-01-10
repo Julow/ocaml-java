@@ -113,6 +113,7 @@ external init_method : Class.t -> init_method -> unit = "ocaml_java__calling_ini
 external arg_int : int -> unit = "ocaml_java__arg_int"
 external arg_float : float -> unit = "ocaml_java__arg_float"
 external arg_double : float -> unit = "ocaml_java__arg_double"
+external arg_string : string -> unit = "ocaml_java__arg_string"
 external arg_bool : bool -> unit = "ocaml_java__arg_bool"
 external arg_char : char -> unit = "ocaml_java__arg_char"
 external arg_int8 : int -> unit = "ocaml_java__arg_int8"

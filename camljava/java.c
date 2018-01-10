@@ -82,6 +82,9 @@ static value alloc_java_obj(jobject object)
 ** -
 ** `arg_stack` represents the argument stack
 ** `perform_type` stores the type of call
+** `local_ref_stack` stores references to objects allocated in `arg_` functions
+**  It is `NULL`-terminated
+**  Local references are deleted after the method as been called
 ** -
 ** Perform types and begining of the stack:
 **  - PERFORM_NONVIRTUAL_CALL (CallNonvirtual*Method*)
@@ -107,6 +110,22 @@ enum e_perform_type
 static enum e_perform_type perform_type;
 static jvalue arg_stack[ARG_STACK_MAX_SIZE];
 static int arg_count;
+
+// Local refs
+
+static jobject local_ref_stack[ARG_STACK_MAX_SIZE];
+static int local_ref_count = 0;
+
+static void clear_local_refs(void)
+{
+	int i;
+
+	for (i = 0; i < local_ref_count; i++)
+		(*env)->DeleteLocalRef(env, local_ref_stack[i]);
+	local_ref_count = 0;
+}
+
+// Calling
 
 value ocaml_java__calling_member_method(value obj, value class_, value meth)
 {
@@ -149,6 +168,16 @@ value ocaml_java__calling_init_method(value class_, value meth)
 	return Val_unit;
 }
 
+// Arg
+
+static jobject arg_string(value v)
+{
+	jstring const js = (*env)->NewStringUTF(env, String_val(v));
+
+	local_ref_stack[local_ref_count++] = js;
+	return js;
+}
+
 // Generate a Java.arg_ function with name `NAME`
 // `DST` is the field in jvalue
 // `CONV` is the function that convert from OCaml value to Java type
@@ -165,6 +194,7 @@ value ocaml_java__arg_##NAME(value v)		\
 ARG(int, i, Long_val)
 ARG(float, f, Double_val)
 ARG(double, d, Double_val)
+ARG(string, l, arg_string)
 ARG(bool, z, Bool_val)
 ARG(char, c, Long_val)
 ARG(int8, b, Long_val)
@@ -174,6 +204,8 @@ ARG(int64, j, Int64_val)
 ARG(obj, l, ARG_TO_OBJ)
 
 #undef ARG
+
+// Call
 
 #define P_INIT_FAIL(v) \
 	(caml_failwith("only call_obj can be used with init_method"), Val_unit)
@@ -208,6 +240,7 @@ value ocaml_java__call_##NAME(value unit)							\
 			(jmethodID)	arg_stack[1].l,								\
 						arg_stack + 2));							\
 	}																\
+	clear_local_refs();												\
 	return Val_unit;												\
 }
 
