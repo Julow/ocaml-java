@@ -109,6 +109,22 @@ external meth_nonvirtual : obj -> Class.t -> meth -> unit =
 	Must be called with `call_obj` to retrieve the object *)
 external new_ : Class.t -> meth_constructor -> unit = "ocaml_java__calling_init"
 
+(** Accessing a field
+	-
+	Begins the accessing of a field with a call to one of:
+		- `field obj field`
+		- `field_static class_ field`
+	-
+	Get the value with the `call_`* functions *)
+
+(** Begin the accessing of a field
+	Raises `Invalid_argument` if `object` is null *)
+external field : obj -> field -> unit = "ocaml_java__calling_field"
+
+(** Same as `field`, for static field *)
+external field_static : Class.t -> field_static -> unit =
+	"ocaml_java__calling_field_static"
+
 (** Adds an argument on the stack *)
 external arg_int : int -> unit = "ocaml_java__arg_int"
 external arg_float : float -> unit = "ocaml_java__arg_float"

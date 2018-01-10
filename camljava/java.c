@@ -105,6 +105,8 @@ enum e_perform_type
 	PERFORM_STATIC_CALL,
 	PERFORM_CALL,
 	PERFORM_INIT,
+	PERFORM_FIELD,
+	PERFORM_FIELD_STATIC,
 };
 
 static enum e_perform_type perform_type;
@@ -168,6 +170,26 @@ value ocaml_java__calling_init(value class_, value meth)
 	return Val_unit;
 }
 
+value ocaml_java__calling_field(value obj, value field)
+{
+	if (obj == Java_null_val)
+		caml_invalid_argument("Java.field: `object` is null");
+	arg_stack[0].l = Java_obj_val(obj);
+	arg_stack[1].l = (jobject)Nativeint_val(field);
+	arg_count = 2;
+	perform_type = PERFORM_FIELD;
+	return Val_unit;
+}
+
+value ocaml_java__calling_field_static(value class_, value field)
+{
+	arg_stack[0].l = Java_obj_val(class_);
+	arg_stack[1].l = (jobject)Nativeint_val(field);
+	arg_count = 2;
+	perform_type = PERFORM_FIELD_STATIC;
+	return Val_unit;
+}
+
 // Arg
 
 static jobject arg_string(value v)
@@ -207,13 +229,17 @@ ARG(obj, l, ARG_TO_OBJ)
 
 // Call
 
+#define ENABLED(a) a
+#define DISABLED_(a)
+#define DISABLED(msg) (caml_failwith(msg), Val_unit) DISABLED_
 #define P_INIT_FAIL(v) \
 	(caml_failwith("only call_obj can be used with init_method"), Val_unit)
 
 // Generate a Java.call_ function with name `NAME`
 // `CONV` is the function that convert from the java type to `value`
-// `P_INIT_CONV` can be used to disable the `PERFORM_INIT` case
-#define CALL(NAME, MNAME, CONV, P_INIT_CONV) \
+// `INIT_ENABLED` and `FIELD_ENABLED` can be used to disable the
+//   `PERFORM_INIT`, `PERFORM_FIELD` and `PERFORM_FIELD_STATIC` cases
+#define CALL(NAME, MNAME, CONV, INIT_ENABLED, FIELD_ENABLED) \
 value ocaml_java__call_##NAME(value unit)							\
 {																	\
 	switch (perform_type)											\
@@ -235,31 +261,46 @@ value ocaml_java__call_##NAME(value unit)							\
 			(jmethodID)	arg_stack[1].l,								\
 						arg_stack + 2));							\
 	case PERFORM_INIT:												\
-		return P_INIT_CONV((*env)->NewObjectA(env,					\
+		return INIT_ENABLED(CONV((*env)->NewObjectA(env,			\
 			(jclass)	arg_stack[0].l,								\
 			(jmethodID)	arg_stack[1].l,								\
-						arg_stack + 2));							\
+						arg_stack + 2)));							\
+	case PERFORM_FIELD:												\
+		return FIELD_ENABLED(CONV((*env)->Get##MNAME##Field(env,	\
+						arg_stack[0].l,								\
+			(jfieldID)	arg_stack[1].l)));							\
+	case PERFORM_FIELD_STATIC:										\
+		return FIELD_ENABLED(CONV((*env)->GetStatic##MNAME##Field(env,	\
+			(jclass)	arg_stack[0].l,								\
+			(jfieldID)	arg_stack[1].l)));							\
 	}																\
 	clear_local_refs();												\
 	return Val_unit;												\
 }
 
-#define CONV_UNIT(v)	((v), Val_unit)
-#define CONV_STRING(v)	(jstring_to_cstring(env, (jstring)(v)))
-CALL(unit, Void, CONV_UNIT, P_INIT_FAIL)
-CALL(int, Int, Val_long, P_INIT_FAIL)
-CALL(float, Float, caml_copy_double, P_INIT_FAIL)
-CALL(double, Double, caml_copy_double, P_INIT_FAIL)
-CALL(string, Object, CONV_STRING, P_INIT_FAIL)
-CALL(bool, Boolean, Val_bool, P_INIT_FAIL)
-CALL(char, Char, Val_long, P_INIT_FAIL)
-CALL(int8, Byte, Val_long, P_INIT_FAIL)
-CALL(int16, Short, Val_long, P_INIT_FAIL)
-CALL(int32, Int, caml_copy_int32, P_INIT_FAIL)
-CALL(int64, Long, caml_copy_int64, P_INIT_FAIL)
-CALL(obj, Object, alloc_java_obj, alloc_java_obj)
+#define P_INIT_DISABLED(n) DISABLED("Java.new_: Java.call_" n)
+
+#define CONV_UNIT(v)		((v), Val_unit)
+#define FIELD_CONV_UNIT(v)	Val_unit
+#define CONV_STRING(v)		(jstring_to_cstring(env, (jstring)(v)))
+CALL(unit, Void, CONV_UNIT, P_INIT_DISABLED("unit"),
+	DISABLED("Java.field: Java.call_unit"))
+CALL(int, Int, Val_long, P_INIT_DISABLED("int"), ENABLED)
+CALL(float, Float, caml_copy_double, P_INIT_DISABLED("float"), ENABLED)
+CALL(double, Double, caml_copy_double, P_INIT_DISABLED("double"), ENABLED)
+CALL(string, Object, CONV_STRING, P_INIT_DISABLED("string"), ENABLED)
+CALL(bool, Boolean, Val_bool, P_INIT_DISABLED("bool"), ENABLED)
+CALL(char, Char, Val_long, P_INIT_DISABLED("char"), ENABLED)
+CALL(int8, Byte, Val_long, P_INIT_DISABLED("int8"), ENABLED)
+CALL(int16, Short, Val_long, P_INIT_DISABLED("int16"), ENABLED)
+CALL(int32, Int, caml_copy_int32, P_INIT_DISABLED("int32"), ENABLED)
+CALL(int64, Long, caml_copy_int64, P_INIT_DISABLED("int64"), ENABLED)
+CALL(obj, Object, alloc_java_obj, ENABLED, ENABLED)
 
 #undef CALL
+#undef ENABLED
+#undef DISABLED
+#undef DISABLED_
 
 /*
 ** ========================================================================== **
