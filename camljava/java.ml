@@ -21,6 +21,8 @@ type meth_constructor
 type field
 type field_static
 
+exception Exception of obj
+
 (** Spawn a JVM and initialise the library
 	Takes an array of JVM options *)
 external startup : string array -> unit = "ocaml_java__startup"
@@ -29,6 +31,9 @@ external shutdown : unit -> unit = "ocaml_java__shutdown"
 let init opts =
 	startup opts;
 	at_exit shutdown
+
+let () =
+	Callback.register_exception "Java.Exception" (Exception null)
 
 module Class =
 struct

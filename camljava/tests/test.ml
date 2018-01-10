@@ -39,6 +39,11 @@ let () =
 	field_static cls method_static_field_a;
 	assert (call_int () = 42);
 
+	new_ cls method_init_ab;
+	arg_int 1;
+	arg_string "2";
+	let obj = call_obj () in
+
 	let test tname sigt arg call expected =
 		let get_m = Class.get_meth cls ("test_get_" ^ tname) ("()" ^ sigt)
 		and id_m = Class.get_meth cls "test_id" ("(" ^ sigt ^ ")" ^ sigt) in
@@ -60,5 +65,29 @@ let () =
 	test "short" "S" arg_int16 call_int16 7;
 	test "int32" "I" arg_int32 call_int32 (Int32.of_int 8);
 	test "int64" "J" arg_int64 call_int64 (Int64.of_int 9);
+
+	let module Throwable =
+	struct
+
+		open Java
+
+		let m_getMessage =
+			let cls = Class.find_class "java/lang/Throwable" in
+			Class.get_meth cls "getMessage" "()Ljava/lang/String;"
+
+		let get_message t =
+			meth t m_getMessage;
+			call_string ()
+
+	end in
+
+
+	begin try
+		meth obj (get_meth cls "raise" "()V");
+		call_unit ();
+		assert false
+	with Java.Exception ex ->
+		assert (Throwable.get_message ex = "test")
+	end;
 
 	()

@@ -44,6 +44,11 @@ public class Test
 	public long test_id(long v) { return v; }
 	public Object test_id(Object v) { return v; }
 
+	public void raise() throws Exception
+	{
+		throw new Exception("test");
+	}
+
 	public static int test_f = 42;
 
 	public static int test(int a)
