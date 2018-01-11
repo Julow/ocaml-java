@@ -10,7 +10,7 @@ CCFLAGS = -Wall -Wextra -O2 $(CCINCLUDES)
 
 CCLIBS = -L $(JAVA_HOME)/jre/lib/amd64/server -ljvm
 
-all: camljava.cmxa
+all: camljava.cmxa java.cmi
 
 camljava.cmxa: java.cmx | libcamljava.a
 	$(OCAMLOPT) -linkall -a -cclib "$(CCLIBS) -lcamljava" -o $@ $^

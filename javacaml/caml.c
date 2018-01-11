@@ -5,6 +5,7 @@
 #include <caml/memory.h>
 #include <caml/alloc.h>
 #include <caml/printexc.h>
+#include <caml/fail.h>
 
 static jclass
 	NullPointerException,
@@ -112,7 +113,8 @@ static void init_arg_stack(void)
 	caml_register_global_root(&stack);
 }
 
-void Java_juloo_javacaml_Caml_function__Ljuloo_javacaml_Value_2(JNIEnv *env, jclass c, jobject v)
+void Java_juloo_javacaml_Caml_function__Ljuloo_javacaml_Value_2(JNIEnv *env,
+		jclass c, jobject v)
 {
 	if (IS_NULL(env, v))
 		return THROW_NULLPTR(env, "function");
@@ -121,7 +123,8 @@ void Java_juloo_javacaml_Caml_function__Ljuloo_javacaml_Value_2(JNIEnv *env, jcl
 	(void)c;
 }
 
-void Java_juloo_javacaml_Caml_function__Ljuloo_javacaml_Callback_2(JNIEnv *env, jclass c, jobject callback)
+void Java_juloo_javacaml_Caml_function__Ljuloo_javacaml_Callback_2(JNIEnv *env,
+		jclass c, jobject callback)
 {
 	long func_;
 	value func;
@@ -135,7 +138,8 @@ void Java_juloo_javacaml_Caml_function__Ljuloo_javacaml_Callback_2(JNIEnv *env, 
 	(void)c;
 }
 
-void Java_juloo_javacaml_Caml_method(JNIEnv *env, jclass c, jobject v, jint method_id)
+void Java_juloo_javacaml_Caml_method(JNIEnv *env, jclass c, jobject v,
+		jint method_id)
 {
 	value obj;
 	value method;
@@ -241,7 +245,8 @@ CALL(Value, jobject, CALL_OF_VALUE, NULL)
 // ========================================================================== //
 // getCallback
 
-jobject Java_juloo_javacaml_Caml_getCallback(JNIEnv *env, jclass c, jstring name)
+jobject Java_juloo_javacaml_Caml_getCallback(JNIEnv *env, jclass c,
+		jstring name)
 {
 	char const *name_utf;
 	value *closure;
@@ -262,7 +267,8 @@ jobject Java_juloo_javacaml_Caml_getCallback(JNIEnv *env, jclass c, jstring name
 // ========================================================================== //
 // hashVariant
 
-jlong Java_juloo_javacaml_Caml_hashVariant(JNIEnv *env, jclass c, jstring variantName)
+jlong Java_juloo_javacaml_Caml_hashVariant(JNIEnv *env, jclass c,
+		jstring variantName)
 {
 	char const	*name_utf;
 	value hash;
@@ -310,6 +316,59 @@ static int init_classes(JNIEnv *env)
 #undef F
 #undef DEF
 	return 1;
+}
+
+#define N(NAME, SIGT, MANG)	\
+	{ #NAME, SIGT, Java_juloo_javacaml_Caml_##NAME##MANG }
+
+static JNINativeMethod native_methods[] = {
+	N(getCallback, "(Ljava/lang/String;)Ljuloo/javacaml/Callback;",),
+	N(hashVariant, "(Ljava/lang/String;)I",),
+	N(function, "(Ljuloo/javacaml/Value;)V", __Ljuloo_javacaml_Value_2),
+	N(function, "(Ljuloo/javacaml/Callback;)V", __Ljuloo_javacaml_Callback_2),
+	N(method, "(Ljuloo/javacaml/Value;I)V",),
+	N(argUnit, "()V",),
+	N(argInt, "(I)V",),
+	N(argFloat, "(D)V",),
+	N(argString, "(Ljava/lang/String;)V",),
+	N(argBool, "(Z)V",),
+	N(argInt32, "(I)V",),
+	N(argInt64, "(J)V",),
+	N(argValue, "(Ljuloo/javacaml/Value;)V",),
+	N(callUnit, "()V",),
+	N(callInt, "()I",),
+	N(callFloat, "()D",),
+	N(callString, "()Ljava/lang/String;",),
+	N(callBool, "()Z",),
+	N(callInt32, "()I",),
+	N(callInt64, "()J",),
+	N(callValue, "()Ljuloo/javacaml/Value;",),
+};
+
+#undef N
+
+#define COUNT(x) (sizeof(x) / sizeof(*x))
+
+// Native methods must be registered if javacaml is not loaded directly
+//  from Java's `System.loadLibrary`
+static int register_natives(JNIEnv *env)
+{
+	jclass const caml_class = (*env)->FindClass(env, "juloo/javacaml/Caml");
+
+	if (caml_class == NULL)
+		return 0;
+	return ((*env)->RegisterNatives(env, caml_class, native_methods,
+			COUNT(native_methods)) == 0);
+}
+
+// Initialise the library from camljava
+void ocaml_java__javacaml_init(JNIEnv *env)
+{
+	if (!init_classes(env))
+		caml_failwith("Could not link against javacaml classes");
+	if (!register_natives(env))
+		caml_failwith("Failed to register javacaml native methods");
+	init_arg_stack();
 }
 
 void Java_juloo_javacaml_Caml_startup(JNIEnv *env, jclass c)

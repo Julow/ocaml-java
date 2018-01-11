@@ -410,6 +410,8 @@ value ocaml_java__class_get_field_static(value class_, value name, value sig)
 
 static JavaVM *jvm;
 
+void ocaml_java__javacaml_init(JNIEnv *env);
+
 value ocaml_java__startup(value opt_array)
 {
 	CAMLparam1(opt_array);
@@ -431,6 +433,7 @@ value ocaml_java__startup(value opt_array)
 	if (success != JNI_OK)
 		caml_failwith("Java.init");
 	init_exception();
+	ocaml_java__javacaml_init(env);
 	printf("jvm created\n");
 	CAMLreturn(Val_unit);
 }
