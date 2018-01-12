@@ -80,6 +80,7 @@ public class Caml
 	 * | argInt32		| int			| int32
 	 * | argInt64		| long			| int64
 	 * | argValue		| Value			| *
+	 * | argObject		| Object		| Java.obj
 	 */
 	public static native void argUnit()
 		throws ArgumentStackOverflowException;
@@ -99,6 +100,8 @@ public class Caml
 	public static native void argValue(Value v)
 		throws NullPointerException, // if `v` is null
 			ArgumentStackOverflowException;
+	public static native void argObject(Object v)
+		throws ArgumentStackOverflowException;
 
 	/**
 	 * Stop the calling of a function and calls it.
@@ -114,4 +117,5 @@ public class Caml
 	public static native int callInt32() throws CamlException;
 	public static native long callInt64() throws CamlException;
 	public static native Value callValue() throws CamlException;
+	public static native Object callObject() throws CamlException;
 }

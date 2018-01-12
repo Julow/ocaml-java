@@ -15,8 +15,9 @@ run: all
 all: | libs
 	make libtest.so test.jar
 
-libtest.so: $(wildcard *.ml *.c) \
+libtest.so: \
 	$(CAMLJAVA_DIR)/java.mli $(CAMLJAVA_DIR)/java.ml \
+	$(wildcard *.ml *.c) \
 	$(CAMLJAVA_TESTS_DIR)/test.ml
 	ocamlfind ocamlopt -linkpkg -output-obj \
 		-runtime-variant _pic \

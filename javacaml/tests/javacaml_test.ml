@@ -18,4 +18,5 @@ let () =
 	Callback.register "test_a" fst;
 	Callback.register "test_b" snd;
 	Callback.register "get_obj" (fun () -> test_obj);
+	Callback.register "is_null" (fun obj -> obj = Java.null);
 	print_endline "OCaml loaded"

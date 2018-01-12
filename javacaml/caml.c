@@ -6,6 +6,7 @@
 #include <caml/alloc.h>
 #include <caml/printexc.h>
 #include <caml/fail.h>
+#include "camljava_utils.h"
 
 static jclass
 	NullPointerException,
@@ -189,6 +190,7 @@ void Java_juloo_javacaml_Caml_arg##NAME(JNIEnv *env, jclass c, TYPE v) \
 #define ARG_TO_INT32(env, v)	caml_copy_int32(v)
 #define ARG_TO_INT64(env, v)	caml_copy_int64(v)
 #define ARG_TO_VALUE(env, v)	CHECK_NULLPTR(env, v, jvalue_get)
+#define ARG_TO_OBJECT(env, v)	alloc_java_obj(env, v)
 ARG(Unit, int /* dummy */, ARG_TO_UNIT)
 ARG(Int, jint, ARG_TO_INT)
 ARG(Float, jdouble, ARG_TO_FLOAT)
@@ -197,6 +199,7 @@ ARG(Bool, jboolean, ARG_TO_BOOL)
 ARG(Int32, jint, ARG_TO_INT32)
 ARG(Int64, jlong, ARG_TO_INT64)
 ARG(Value, jobject, ARG_TO_VALUE)
+ARG(Object, jobject, ARG_TO_OBJECT)
 
 #undef ARG
 
@@ -231,6 +234,7 @@ TYPE Java_juloo_javacaml_Caml_call##NAME(JNIEnv *env, jclass c) \
 #define CALL_OF_INT32(env, v)	Int32_val(v)
 #define CALL_OF_INT64(env, v)	Int64_val(v)
 #define CALL_OF_VALUE(env, v)	jvalue_new(env, v)
+#define CALL_OF_OBJECT(env, v)	((v == Java_null_val) ? NULL : Java_obj_val(v))
 CALL(Unit, void, CALL_OF_UNIT,)
 CALL(Int, jint, CALL_OF_INT, 0)
 CALL(Float, jdouble, CALL_OF_FLOAT, 0.0)
@@ -239,6 +243,7 @@ CALL(Bool, jboolean, CALL_OF_BOOL, 0)
 CALL(Int32, jint, CALL_OF_INT32, 0)
 CALL(Int64, jlong, CALL_OF_INT64, 0)
 CALL(Value, jobject, CALL_OF_VALUE, NULL)
+CALL(Object, jobject, CALL_OF_OBJECT, NULL)
 
 #undef CALL
 
@@ -386,8 +391,6 @@ void ocaml_java__javacaml_init(JNIEnv *env)
 }
 
 #else
-
-void ocaml_java__camljava_init(JNIEnv *_env);
 
 void Java_juloo_javacaml_Caml_startup(JNIEnv *env, jclass c)
 {

@@ -6,6 +6,7 @@
 #include <caml/fail.h>
 #include <caml/custom.h>
 #include <caml/alloc.h>
+#include "camljava_utils.h"
 
 #define JNI_VERSION JNI_VERSION_1_4
 
@@ -13,19 +14,8 @@ static JNIEnv *env;
 
 /*
 ** ========================================================================== **
-** OCaml value that represent a `jobject` pointer or the `null` value
-** -
-** The `jobject` is registered as global ref
-** and automatically released when it is garbage collected
-** -
-** Java_obj_val(v)		Returns the `jobject` pointer, must not be `null`
-** Java_null_val		`null` value
-** alloc_java_obj(obj)	Allocates the value, `obj` is registered as global ref
+** java_obj custom ops (alloc_java_obj)
 */
-
-#define Java_obj_val(v)	(*(jobject*)Data_custom_val(v))
-
-#define Java_null_val	(Val_long(0))
 
 static void java_obj_finalize(value v)
 {
@@ -43,7 +33,7 @@ static int java_obj_compare(value a, value b)
 	return a_ - b_;
 }
 
-static struct custom_operations java_obj_custom_ops = {
+struct custom_operations ocamljava__java_obj_custom_ops = {
 	.identifier = "ocaml_java__obj",
 	.finalize = java_obj_finalize,
 	.compare = java_obj_compare,
@@ -52,18 +42,6 @@ static struct custom_operations java_obj_custom_ops = {
 	.serialize = custom_serialize_default,
 	.deserialize = custom_deserialize_default
 };
-
-static value alloc_java_obj(jobject object)
-{
-	value v;
-
-	if (object == NULL)
-		return Java_null_val;
-	v = alloc_custom(&java_obj_custom_ops, sizeof(jobject), 0, 1);
-	object = (*env)->NewGlobalRef(env, object);
-	*(jobject*)Data_custom_val(v) = object;
-	return v;
-}
 
 /*
 ** ========================================================================== **
@@ -87,7 +65,7 @@ static void check_exceptions(void)
 		if (java_exception == NULL)
 			caml_failwith("camljava not properly linked");
 	}
-	caml_raise_with_arg(*java_exception, alloc_java_obj(exn));
+	caml_raise_with_arg(*java_exception, alloc_java_obj(env, exn));
 }
 
 /*
@@ -324,6 +302,7 @@ static value conv_string(jstring str)
 #define P_INIT_DISABLED(n) DISABLED("Java.new_: Java.call_" n)
 
 #define CONV_UNIT(v)		Val_unit
+#define CONV_OBJ(v)			alloc_java_obj(env, v)
 CALL(unit, int /* dummy */, Void, CONV_UNIT, P_INIT_DISABLED("unit"),
 	DISABLED("Java.field: Java.call_unit"), 0;(void)res;(void))
 CALL(int, jint, Int, Val_long, P_INIT_DISABLED("int"), ENABLED,)
@@ -337,7 +316,7 @@ CALL(int8, jbyte, Byte, Val_long, P_INIT_DISABLED("int8"), ENABLED,)
 CALL(int16, jshort, Short, Val_long, P_INIT_DISABLED("int16"), ENABLED,)
 CALL(int32, jint, Int, caml_copy_int32, P_INIT_DISABLED("int32"), ENABLED,)
 CALL(int64, jlong, Long, caml_copy_int64, P_INIT_DISABLED("int64"), ENABLED,)
-CALL(obj, jobject, Object, alloc_java_obj, ENABLED, ENABLED,)
+CALL(obj, jobject, Object, CONV_OBJ, ENABLED, ENABLED,)
 
 #undef CALL
 #undef ENABLED
@@ -358,7 +337,7 @@ value ocaml_java__find_class(value name)
 	c = (*env)->FindClass(env, String_val(name));
 	if (c == NULL)
 		caml_raise_not_found();
-	return alloc_java_obj(c);
+	return alloc_java_obj(env, c);
 }
 
 static value get_method(jobject class_, char const *name, char const *sig)

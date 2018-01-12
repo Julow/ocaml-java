@@ -110,6 +110,13 @@ public class Test
 		Caml.argValue(b);
 		assert Caml.callString().equals("ab");
 
+		Caml.function(Caml.getCallback("is_null"));
+		Caml.argObject(null);
+		assert Caml.callBool();
+		Caml.function(Caml.getCallback("is_null"));
+		Caml.argObject("");
+		assert !Caml.callBool();
+
 // method
 		Caml.function(Caml.getCallback("get_obj"));
 		Caml.argUnit();

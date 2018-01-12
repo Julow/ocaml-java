@@ -1,12 +1,13 @@
 # -
 
+CAMLJAVA_DIR = ../camljava
+
 OCAML_WHERE := $(shell ocamlc -where)
 CCINCLUDES = -I "$(JAVA_HOME)/include" \
 	-I "$(JAVA_HOME)/include/linux" \
-	-I "$(OCAML_WHERE)"
+	-I "$(OCAML_WHERE)" \
+	-I "$(CAMLJAVA_DIR)"
 CCFLAGS = -Wall -Wextra -O2 -fPIC $(CCINCLUDES) $(EXTRA_CCFLAGS)
-
-CAMLJAVA_DIR = ../camljava
 
 BUILD_DIR = bin
 TARGET_DIR = bin
@@ -44,7 +45,7 @@ $(T)/libjavacaml.a: $(OBJ_FILES) | $(T)
 $(B)/camljava/%.o: | $(B)/camljava
 	make -C $(CAMLJAVA_DIR) \
 		BUILD_DIR="$${PWD}/$(@D)" \
-		EXTRA_CCFLAGS="-DTARGET_JAVACAML=" \
+		EXTRA_CCFLAGS="-fPIC -DTARGET_JAVACAML=" \
 		"$${PWD}/$@"
 
 $(B)/camljava: | $(B)
