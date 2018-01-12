@@ -387,11 +387,14 @@ void ocaml_java__javacaml_init(JNIEnv *env)
 
 #else
 
+void ocaml_java__camljava_init(JNIEnv *_env);
+
 void Java_juloo_javacaml_Caml_startup(JNIEnv *env, jclass c)
 {
 	static char *argv[] = { "", NULL };
 	if (!init_classes(env))
 		return ;
+	ocaml_java__camljava_init(env);
 	caml_startup(argv);
 	init_arg_stack();
 	(void)c;

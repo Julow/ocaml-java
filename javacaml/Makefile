@@ -6,6 +6,8 @@ CCINCLUDES = -I "$(JAVA_HOME)/include" \
 	-I "$(OCAML_WHERE)"
 CCFLAGS = -Wall -Wextra -O2 -fPIC $(CCINCLUDES) $(EXTRA_CCFLAGS)
 
+CAMLJAVA_DIR = ../camljava
+
 BUILD_DIR = bin
 TARGET_DIR = bin
 B = $(BUILD_DIR)
@@ -34,10 +36,19 @@ $(B)/%.class: %.java | $(B)
 
 # libjavacaml.a
 
-OBJ_FILES = $(B)/caml.o
+OBJ_FILES = $(B)/caml.o $(B)/camljava/java_stubs.o
 
 $(T)/libjavacaml.a: $(OBJ_FILES) | $(T)
 	ar rcs $@ $^
+
+$(B)/camljava/%.o: | $(B)/camljava
+	make -C $(CAMLJAVA_DIR) \
+		BUILD_DIR="$${PWD}/$(@D)" \
+		EXTRA_CCFLAGS="-DTARGET_JAVACAML=" \
+		"$${PWD}/$@"
+
+$(B)/camljava: | $(B)
+DIR_RULES += $(B)/camljava
 
 $(B)/%.o: %.c | $(B)
 	gcc $(CCFLAGS) -c -o $@ $<

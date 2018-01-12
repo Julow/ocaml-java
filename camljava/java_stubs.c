@@ -70,7 +70,7 @@ static value alloc_java_obj(jobject object)
 ** Exceptions
 */
 
-static value *java_exception;
+static value *java_exception = NULL;
 
 // Check if a Java exception has been thrown
 // if there is, raises Java.Exception
@@ -81,12 +81,13 @@ static void check_exceptions(void)
 	exn = (*env)->ExceptionOccurred(env);
 	if (exn == NULL) return ;
 	(*env)->ExceptionClear(env);
+	if (java_exception == NULL)
+	{
+		java_exception = caml_named_value("Java.Exception");
+		if (java_exception == NULL)
+			caml_failwith("camljava not properly linked");
+	}
 	caml_raise_with_arg(*java_exception, alloc_java_obj(exn));
-}
-
-static void init_exception(void)
-{
-	java_exception = caml_named_value("Java.Exception");
 }
 
 /*
@@ -418,6 +419,28 @@ value ocaml_java__class_get_field_static(value class_, value name, value sig)
 ** Init
 */
 
+#ifdef TARGET_JAVACAML
+
+void ocaml_java__camljava_init(JNIEnv *_env)
+{
+	env = _env;
+}
+
+value ocaml_java__startup(value opt_array)
+{
+	caml_failwith("Java.init: Unavailable when linked to javacaml");
+	return Val_unit;
+	(void)opt_array;
+}
+
+value ocaml_java__shutdown(value unit)
+{
+	return Val_unit;
+	(void)unit;
+}
+
+#else
+
 static JavaVM *jvm;
 
 void ocaml_java__javacaml_init(JNIEnv *env);
@@ -442,7 +465,6 @@ value ocaml_java__startup(value opt_array)
 	caml_stat_free(options);
 	if (success != JNI_OK)
 		caml_failwith("Java.init");
-	init_exception();
 	ocaml_java__javacaml_init(env);
 	printf("jvm created\n");
 	CAMLreturn(Val_unit);
@@ -455,3 +477,5 @@ value ocaml_java__shutdown(value unit)
 	return Val_unit;
 	(void)unit;
 }
+
+#endif

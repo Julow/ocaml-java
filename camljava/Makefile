@@ -5,7 +5,7 @@ OCAMLOPT = ocamlfind ocamlopt
 CCINCLUDES = -I $(JAVA_HOME)/include \
 	-I $(JAVA_HOME)/include/linux
 
-CCFLAGS = -Wall -Wextra -O2 $(CCINCLUDES)
+CCFLAGS = -Wall -Wextra -O2 $(CCINCLUDES) $(EXTRA_CCFLAGS)
 
 CCLIBS = -L $(JAVA_HOME)/jre/lib/amd64/server -ljvm
 
