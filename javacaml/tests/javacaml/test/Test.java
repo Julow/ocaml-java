@@ -140,6 +140,13 @@ public class Test
 		System.out.println("Javacaml Ok");
 	}
 
+	private static void test_camljava()
+	{
+		Caml.function(Caml.getCallback("camljava_do_test"));
+		Caml.argUnit();
+		Caml.callUnit();
+	}
+
 	public static void do_test() throws Exception
 	{
 		try
@@ -158,6 +165,7 @@ public class Test
 			System.loadLibrary("test");
 			Caml.startup();
 			do_test();
+			test_camljava();
 		}
 		catch (Exception e)
 		{

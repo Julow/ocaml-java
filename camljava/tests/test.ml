@@ -1,14 +1,4 @@
-let jar_files = [
-	"test.jar";
-	"../../javacaml/tests/test.jar";
-	"../../javacaml/bin/javacaml.jar";
-]
-
-let () =
-	Java.init [|
-		"-Djava.class.path=" ^ String.concat ":" jar_files;
-		"-ea"
-	|]
+(*  *)
 
 module Throwable =
 struct
@@ -17,16 +7,16 @@ struct
 
 	let m_getMessage,
 		m_printStackTrace =
-		let cls = Class.find_class "java/lang/Throwable" in
-		Class.get_meth cls "getMessage" "()Ljava/lang/String;",
-		Class.get_meth cls "printStackTrace" "()V"
+		let cls = lazy (Class.find_class "java/lang/Throwable") in
+		lazy (Class.get_meth (Lazy.force cls) "getMessage" "()Ljava/lang/String;"),
+		lazy (Class.get_meth (Lazy.force cls) "printStackTrace" "()V")
 
 	let get_message t =
-		meth t m_getMessage;
+		meth t @@ Lazy.force m_getMessage;
 		call_string ()
 
 	let print_stack_trace t =
-		meth t m_printStackTrace;
+		meth t @@ Lazy.force m_printStackTrace;
 		call_unit ()
 
 end
@@ -61,6 +51,9 @@ let test () =
 
 	field obj field_a;
 	assert (call_int () = 42);
+
+	field obj field_b;
+	assert (call_string () = "abc");
 
 	field_static cls method_static_field_a;
 	assert (call_int () = 42);
@@ -117,6 +110,8 @@ let test () =
 
 	()
 
+let () = Callback.register "camljava_do_test" test
+
 let test_javacaml () =
 	let cls = Java.Class.find_class "javacaml/test/Test" in
 	let m_do_test = Java.Class.get_meth_static cls "do_test" "()V" in
@@ -124,9 +119,21 @@ let test_javacaml () =
 	Java.call_unit ()
 
 let () =
-	try
-		test ();
-		test_javacaml ()
-	with Java.Exception e ->
-		Throwable.print_stack_trace e;
-		failwith ""
+	let jar_files = [
+		"test.jar";
+		"../../javacaml/tests/test.jar";
+		"../../javacaml/bin/javacaml.jar"
+	] in
+	(* quick check if executed from javacaml's tests *)
+	if Sys.argv.(0) <> "" then begin
+		Java.init [|
+			"-Djava.class.path=" ^ String.concat ":" jar_files;
+			"-ea"
+		|];
+		try
+			test ();
+			test_javacaml ()
+		with Java.Exception e ->
+			Throwable.print_stack_trace e;
+			failwith ""
+	end
