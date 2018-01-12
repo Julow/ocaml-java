@@ -1,4 +1,6 @@
-package test;
+package camljava.test;
+
+import juloo.javacaml.Caml;
 
 public class Test
 {
@@ -47,6 +49,15 @@ public class Test
 	public void raise() throws Exception
 	{
 		throw new Exception("test");
+	}
+
+	public static String test_rec_b(String s)
+	{
+		String s_ = s + "b";
+
+		Caml.function(Caml.getCallback("test_rec_a"));
+		Caml.argString(s_);
+		return Caml.callString();
 	}
 
 	public static int test_f = 42;

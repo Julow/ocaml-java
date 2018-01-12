@@ -1,4 +1,4 @@
-package test;
+package javacaml.test;
 
 import juloo.javacaml.Caml;
 import juloo.javacaml.Callback;
@@ -6,16 +6,9 @@ import juloo.javacaml.Value;
 import juloo.javacaml.CallbackNotFoundException;
 import juloo.javacaml.CamlException;
 import juloo.javacaml.InvalidMethodIdException;
-import java.util.ArrayList;
 
 public class Test
 {
-	static
-	{
-		System.loadLibrary("test");
-		Caml.startup();
-	}
-
 	private static void test()
 	{
 // getCallback
@@ -144,20 +137,27 @@ public class Test
 		Caml.argInt(1);
 		assert Caml.callInt() == 2;
 
+		System.out.println("Javacaml Ok");
+	}
+
+	public static void do_test() throws Exception
+	{
+		try
+		{
+			assert false;
+			throw new Exception("Cannot test, asserts are disabled");
+		}
+		catch (AssertionError e) {}
+		test();
 	}
 
 	public static void main(String[] args)
 	{
 		try
 		{
-			assert false;
-			System.out.println("Cannot test, asserts are disabled");
-			System.exit(1);
-		}
-		catch (AssertionError e) {}
-		try
-		{
-			test();
+			System.loadLibrary("test");
+			Caml.startup();
+			do_test();
 		}
 		catch (Exception e)
 		{
@@ -165,6 +165,5 @@ public class Test
 			e.printStackTrace();
 			assert false;
 		}
-		System.out.println("Ok");
 	}
 }

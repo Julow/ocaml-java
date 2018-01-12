@@ -1,14 +1,40 @@
-let init cp =
-	Java.init [|
-		"-Djava.class.path=" ^ cp
-	|]
+let jar_files = [
+	"test.jar";
+	"../../javacaml/tests/test.jar";
+	"../../javacaml/bin/javacaml.jar";
+]
 
 let () =
-	init Sys.argv.(1);
+	Java.init [|
+		"-Djava.class.path=" ^ String.concat ":" jar_files;
+		"-ea"
+	|]
 
+module Throwable =
+struct
+
+	open Java
+
+	let m_getMessage,
+		m_printStackTrace =
+		let cls = Class.find_class "java/lang/Throwable" in
+		Class.get_meth cls "getMessage" "()Ljava/lang/String;",
+		Class.get_meth cls "printStackTrace" "()V"
+
+	let get_message t =
+		meth t m_getMessage;
+		call_string ()
+
+	let print_stack_trace t =
+		meth t m_printStackTrace;
+		call_unit ()
+
+end
+
+let test () =
 	let open Java.Class in
 
-	let cls = find_class "test/Test" in
+	let cls = find_class "camljava/test/Test" in
 
 	let method_init = get_constructor cls "()V"
 	and method_init_ab = get_constructor cls "(ILjava/lang/String;)V"
@@ -66,22 +92,6 @@ let () =
 	test "int32" "I" arg_int32 call_int32 (Int32.of_int 8);
 	test "int64" "J" arg_int64 call_int64 (Int64.of_int 9);
 
-	let module Throwable =
-	struct
-
-		open Java
-
-		let m_getMessage =
-			let cls = Class.find_class "java/lang/Throwable" in
-			Class.get_meth cls "getMessage" "()Ljava/lang/String;"
-
-		let get_message t =
-			meth t m_getMessage;
-			call_string ()
-
-	end in
-
-
 	begin try
 		meth obj (get_meth cls "raise" "()V");
 		call_unit ();
@@ -90,4 +100,33 @@ let () =
 		assert (Throwable.get_message ex = "test")
 	end;
 
+	let m_rec_b = get_meth_static cls "test_rec_b" "(Ljava/lang/String;)Ljava/lang/String;" in
+
+	let test_rec_a s =
+		let s = s ^ "a" in
+		if String.length s >= 64 then s
+		else begin
+			meth_static cls m_rec_b;
+			arg_string s;
+			call_string ()
+		end
+	in
+	Callback.register "test_rec_a" test_rec_a;
+
+	print_endline @@ test_rec_a "-> ";
+
 	()
+
+let test_javacaml () =
+	let cls = Java.Class.find_class "javacaml/test/Test" in
+	let m_do_test = Java.Class.get_meth_static cls "do_test" "()V" in
+	Java.meth_static cls m_do_test;
+	Java.call_unit ()
+
+let () =
+	try
+		test ();
+		test_javacaml ()
+	with Java.Exception e ->
+		Throwable.print_stack_trace e;
+		failwith ""

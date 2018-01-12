@@ -2,11 +2,11 @@
 
 JAVACAML_DIR = ..
 
-JAVACAML_JAR = $(JAVACAML_DIR)/javacaml.jar
-JAVACAML_A = $(JAVACAML_DIR)/libjavacaml.a
+JAVACAML_JAR = $(JAVACAML_DIR)/bin/javacaml.jar
+JAVACAML_A = $(JAVACAML_DIR)/bin/libjavacaml.a
 
 run: all
-	LD_LIBRARY_PATH=. java -ea -cp test.jar:$(JAVACAML_JAR) test.Test
+	LD_LIBRARY_PATH=. java -ea -cp test.jar:$(JAVACAML_JAR) javacaml.test.Test
 
 all: | libs
 	make libtest.so test.jar
@@ -18,15 +18,15 @@ libtest.so: $(wildcard *.ml *.c)
 		-cclib "-Wl,--whole-archive $(JAVACAML_A) -Wl,--no-whole-archive" \
 		$^ -o $@
 
-test.jar: $(wildcard test/*.java)
+test.jar: $(wildcard javacaml/test/*.java)
 	javac -cp $(JAVACAML_JAR) $^
-	jar cf $@ test/*.class
+	jar cf $@ javacaml/test/*.class
 
 libs:
 	make -C $(JAVACAML_DIR)
 
 clean:
-	rm -f $(wildcard *.o *.cmo *.cmi *.cmx *.so *.jar test/*.class)
+	rm -f $(wildcard *.o *.cmo *.cmi *.cmx *.so *.jar test/javacaml/*.class)
 	make -C $(JAVACAML_DIR) clean
 
 re: clean
