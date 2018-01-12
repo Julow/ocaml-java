@@ -318,10 +318,20 @@ static int init_classes(JNIEnv *env)
 	return 1;
 }
 
+#ifdef TARGET_CAMLJAVA
+
+// Caml.startup disabled
+void Java_juloo_javacaml_Caml_startup(JNIEnv *env, jclass c)
+{
+	(void)env;
+	(void)c;
+}
+
 #define N(NAME, SIGT, MANG)	\
 	{ #NAME, SIGT, Java_juloo_javacaml_Caml_##NAME##MANG }
 
 static JNINativeMethod native_methods[] = {
+	N(startup, "()V",),
 	N(getCallback, "(Ljava/lang/String;)Ljuloo/javacaml/Callback;",),
 	N(hashVariant, "(Ljava/lang/String;)I",),
 	N(function, "(Ljuloo/javacaml/Value;)V", __Ljuloo_javacaml_Value_2),
@@ -364,12 +374,18 @@ static int register_natives(JNIEnv *env)
 // Initialise the library from camljava
 void ocaml_java__javacaml_init(JNIEnv *env)
 {
-	if (!init_classes(env))
-		caml_failwith("Could not link against javacaml classes");
-	if (!register_natives(env))
-		caml_failwith("Failed to register javacaml native methods");
 	init_arg_stack();
+	if (!init_classes(env))
+	{
+		// if init_classes fail, it means javacaml.jar is not loaded
+		// clear exception since it is optional
+		(*env)->ExceptionClear(env);
+		return ;
+	}
+	register_natives(env);
 }
+
+#else
 
 void Java_juloo_javacaml_Caml_startup(JNIEnv *env, jclass c)
 {
@@ -380,3 +396,5 @@ void Java_juloo_javacaml_Caml_startup(JNIEnv *env, jclass c)
 	init_arg_stack();
 	(void)c;
 }
+
+#endif

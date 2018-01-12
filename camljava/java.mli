@@ -143,6 +143,8 @@ external call_unit : unit -> unit = "ocaml_java__call_unit"
 external call_int : unit -> int = "ocaml_java__call_int"
 external call_float : unit -> float = "ocaml_java__call_float"
 external call_double : unit -> float = "ocaml_java__call_double"
+
+(** Raises `Failure` if the string is null *)
 external call_string : unit -> string = "ocaml_java__call_string"
 external call_bool : unit -> bool = "ocaml_java__call_bool"
 external call_char : unit -> char = "ocaml_java__call_char"

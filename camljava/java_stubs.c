@@ -11,17 +11,6 @@
 
 static JNIEnv *env;
 
-// Copy the content of `str` into a new OCaml string
-static value jstring_to_cstring(JNIEnv *env, jstring str)
-{
-	char const *const str_utf = (*env)->GetStringUTFChars(env, str, NULL);
-	value cstr;
-
-	cstr = caml_copy_string(str_utf);
-	(*env)->ReleaseStringUTFChars(env, str, str_utf);
-	return cstr;
-}
-
 /*
 ** ========================================================================== **
 ** OCaml value that represent a `jobject` pointer or the `null` value
@@ -122,6 +111,7 @@ static void init_exception(void)
 */
 
 #define ARG_STACK_MAX_SIZE	16
+#define LOCALREF_STACK_MAX_SIZE	32
 
 enum e_perform_type
 {
@@ -139,7 +129,7 @@ static int arg_count;
 
 // Local refs
 
-static jobject local_ref_stack[ARG_STACK_MAX_SIZE];
+static jobject local_ref_stack[LOCALREF_STACK_MAX_SIZE];
 static int local_ref_count = 0;
 
 static void clear_local_refs(void)
@@ -149,6 +139,14 @@ static void clear_local_refs(void)
 	for (i = 0; i < local_ref_count; i++)
 		(*env)->DeleteLocalRef(env, local_ref_stack[i]);
 	local_ref_count = 0;
+}
+
+static void push_local_ref(jobject obj)
+{
+	if (local_ref_count >= LOCALREF_STACK_MAX_SIZE)
+		caml_failwith("Local ref stack overflow");
+	local_ref_stack[local_ref_count] = obj;
+	local_ref_count++;
 }
 
 // Calling
@@ -220,7 +218,7 @@ static jobject arg_string(value v)
 {
 	jstring const js = (*env)->NewStringUTF(env, String_val(v));
 
-	local_ref_stack[local_ref_count++] = js;
+	push_local_ref(js);
 	return js;
 }
 
@@ -309,16 +307,28 @@ value ocaml_java__call_##NAME(value unit)							\
 	(void)unit;														\
 }
 
+static value conv_string(jstring str)
+{
+	char const *str_utf;
+	value cstr;
+
+	if (str == NULL)
+		caml_failwith("Null string");
+	str_utf = (*env)->GetStringUTFChars(env, str, NULL);
+	cstr = caml_copy_string(str_utf);
+	(*env)->ReleaseStringUTFChars(env, str, str_utf);
+	return cstr;
+}
+
 #define P_INIT_DISABLED(n) DISABLED("Java.new_: Java.call_" n)
 
 #define CONV_UNIT(v)		Val_unit
-#define CONV_STRING(v)		(jstring_to_cstring(env, (jstring)(v)))
 CALL(unit, int /* dummy */, Void, CONV_UNIT, P_INIT_DISABLED("unit"),
 	DISABLED("Java.field: Java.call_unit"), 0;(void)res;(void))
 CALL(int, jint, Int, Val_long, P_INIT_DISABLED("int"), ENABLED,)
 CALL(float, jfloat, Float, caml_copy_double, P_INIT_DISABLED("float"), ENABLED,)
 CALL(double, jdouble, Double, caml_copy_double, P_INIT_DISABLED("double"), ENABLED,)
-CALL(string, jobject, Object, CONV_STRING,
+CALL(string, jobject, Object, conv_string,
 	(jobject)(long)P_INIT_DISABLED("string"), ENABLED,)
 CALL(bool, jboolean, Boolean, Val_bool, P_INIT_DISABLED("bool"), ENABLED,)
 CALL(char, jchar, Char, Val_long, P_INIT_DISABLED("char"), ENABLED,)
