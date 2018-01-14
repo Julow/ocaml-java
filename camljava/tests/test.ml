@@ -84,6 +84,8 @@ let test () =
 	test "short" "S" arg_int16 call_int16 7;
 	test "int32" "I" arg_int32 call_int32 (Int32.of_int 8);
 	test "int64" "J" arg_int64 call_int64 (Int64.of_int 9);
+	Callback.register "get_int_pair" (fun () -> (1, 2));
+	test "value" "Ljuloo/javacaml/Value;" arg_value call_value (1, 2);
 
 	begin try
 		meth obj (get_meth cls "raise" "()V");

@@ -1,17 +1,18 @@
 # -
 
+JAVACAML_DIR = ../javacaml
+
 OCAMLOPT = ocamlfind ocamlopt
 
 CCINCLUDES = -I $(JAVA_HOME)/include \
-	-I $(JAVA_HOME)/include/linux
+	-I $(JAVA_HOME)/include/linux \
+	-I $(JAVACAML_DIR)
 
 CCFLAGS = -Wall -Wextra -O2 $(CCINCLUDES) $(EXTRA_CCFLAGS)
 
 CCLIBS = -L $(JAVA_HOME)/jre/lib/amd64/server -ljvm
 
 OCAMLCFLAGS = -I $(T) -I $(B)
-
-JAVACAML_DIR = ../javacaml
 
 BUILD_DIR = bin
 TARGET_DIR = bin

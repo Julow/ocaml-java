@@ -7,6 +7,7 @@
 #include <caml/custom.h>
 #include <caml/alloc.h>
 #include "camljava_utils.h"
+#include "javacaml_utils.h"
 
 #define JNI_VERSION JNI_VERSION_1_4
 
@@ -201,6 +202,14 @@ static jobject arg_string(value v)
 	return js;
 }
 
+static jobject arg_value(value v)
+{
+	jobject const obj = JVALUE_NEW(env, v);
+
+	push_local_ref(obj);
+	return obj;
+}
+
 // Generate a Java.arg_ function with name `NAME`
 // `DST` is the field in jvalue
 // `CONV` is the function that convert from OCaml value to Java type
@@ -225,6 +234,7 @@ ARG(int16, s, Long_val)
 ARG(int32, i, Int32_val)
 ARG(int64, j, Int64_val)
 ARG(obj, l, ARG_TO_OBJ)
+ARG(value, l, arg_value)
 
 #undef ARG
 
@@ -288,21 +298,15 @@ value ocaml_java__call_##NAME(value unit)							\
 
 static value conv_string(jstring str)
 {
-	char const *str_utf;
-	value cstr;
-
-	if (str == NULL)
-		caml_failwith("Null string");
-	str_utf = (*env)->GetStringUTFChars(env, str, NULL);
-	cstr = caml_copy_string(str_utf);
-	(*env)->ReleaseStringUTFChars(env, str, str_utf);
-	return cstr;
+	if (str == NULL) caml_failwith("Null string");
+	return jstring_to_cstring(env, str);
 }
 
 #define P_INIT_DISABLED(n) DISABLED("Java.new_: Java.call_" n)
 
 #define CONV_UNIT(v)		Val_unit
 #define CONV_OBJ(v)			alloc_java_obj(env, v)
+#define CONV_VALUE(v)		JVALUE_GET(env, v)
 CALL(unit, int /* dummy */, Void, CONV_UNIT, P_INIT_DISABLED("unit"),
 	DISABLED("Java.field: Java.call_unit"), 0;(void)res;(void))
 CALL(int, jint, Int, Val_long, P_INIT_DISABLED("int"), ENABLED,)
@@ -317,6 +321,8 @@ CALL(int16, jshort, Short, Val_long, P_INIT_DISABLED("int16"), ENABLED,)
 CALL(int32, jint, Int, caml_copy_int32, P_INIT_DISABLED("int32"), ENABLED,)
 CALL(int64, jlong, Long, caml_copy_int64, P_INIT_DISABLED("int64"), ENABLED,)
 CALL(obj, jobject, Object, CONV_OBJ, ENABLED, ENABLED,)
+CALL(value, jobject, Object, CONV_VALUE,
+	(void*)(long)P_INIT_DISABLED("value"), ENABLED,)
 
 #undef CALL
 #undef ENABLED
@@ -421,8 +427,6 @@ value ocaml_java__shutdown(value unit)
 #else
 
 static JavaVM *jvm;
-
-void ocaml_java__javacaml_init(JNIEnv *env);
 
 value ocaml_java__startup(value opt_array)
 {

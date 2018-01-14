@@ -1,6 +1,7 @@
 package camljava.test;
 
 import juloo.javacaml.Caml;
+import juloo.javacaml.Value;
 
 public class Test
 {
@@ -34,6 +35,11 @@ public class Test
 	public int test_get_int32() { return 8; }
 	public long test_get_int64() { return 9; }
 	public Object test_get_object() { return new Object(); }
+	public Value test_get_value() {
+		Caml.function(Caml.getCallback("get_int_pair"));
+		Caml.argUnit();
+		return Caml.callValue();
+	}
 
 	public int test_id(int v) { return v; }
 	public float test_id(float v) { return v; }
@@ -45,6 +51,7 @@ public class Test
 	public short test_id(short v) { return v; }
 	public long test_id(long v) { return v; }
 	public Object test_id(Object v) { return v; }
+	public Value test_id(Value v) { return v; }
 
 	public void raise() throws Exception
 	{

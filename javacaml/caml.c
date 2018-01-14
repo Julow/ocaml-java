@@ -7,6 +7,7 @@
 #include <caml/printexc.h>
 #include <caml/fail.h>
 #include "camljava_utils.h"
+#include "javacaml_utils.h"
 
 static jclass
 	NullPointerException,
@@ -31,23 +32,12 @@ static jfieldID
 			"Called with null `" ARG_NAME "`"), \
 		(void)0)
 
-// Copy the content of `str` into a new OCaml string
-static value jstring_to_cstring(JNIEnv *env, jstring str)
-{
-	char const *const str_utf = (*env)->GetStringUTFChars(env, str, NULL);
-	value cstr;
-
-	cstr = caml_copy_string(str_utf);
-	(*env)->ReleaseStringUTFChars(env, str, str_utf);
-	return cstr;
-}
-
 // ========================================================================== //
 // Value
 // juloo.javacaml.Value
 
 // Return the value pointed to by the Value `v`
-static value jvalue_get(JNIEnv *env, jobject v)
+value ocaml_java__jvalue_get(JNIEnv *env, jobject v)
 {
 	long const v_ = (*env)->GetLongField(env, v, Value_value);
 
@@ -55,7 +45,7 @@ static value jvalue_get(JNIEnv *env, jobject v)
 }
 
 // Create a new Value object that point to `v`
-static jobject jvalue_new(JNIEnv *env, value v)
+jobject ocaml_java__jvalue_new(JNIEnv *env, value v)
 {
 	value *const global = caml_stat_alloc(sizeof(value));
 
@@ -119,7 +109,7 @@ void Java_juloo_javacaml_Caml_function__Ljuloo_javacaml_Value_2(JNIEnv *env,
 {
 	if (IS_NULL(env, v))
 		return THROW_NULLPTR(env, "function");
-	Store_field(stack, 0, jvalue_get(env, v));
+	Store_field(stack, 0, JVALUE_GET(env, v));
 	stack_size = 1;
 	(void)c;
 }
@@ -147,7 +137,7 @@ void Java_juloo_javacaml_Caml_method(JNIEnv *env, jclass c, jobject v,
 
 	if (IS_NULL(env, v))
 		return THROW_NULLPTR(env, "object");
-	obj = jvalue_get(env, v);
+	obj = JVALUE_GET(env, v);
 	method = caml_get_public_method(obj, method_id);
 	if (method == 0)
 	{
@@ -189,7 +179,7 @@ void Java_juloo_javacaml_Caml_arg##NAME(JNIEnv *env, jclass c, TYPE v) \
 #define ARG_TO_BOOL(env, v)		Val_bool(v)
 #define ARG_TO_INT32(env, v)	caml_copy_int32(v)
 #define ARG_TO_INT64(env, v)	caml_copy_int64(v)
-#define ARG_TO_VALUE(env, v)	CHECK_NULLPTR(env, v, jvalue_get)
+#define ARG_TO_VALUE(env, v)	CHECK_NULLPTR(env, v, JVALUE_GET)
 #define ARG_TO_OBJECT(env, v)	alloc_java_obj(env, v)
 ARG(Unit, int /* dummy */, ARG_TO_UNIT)
 ARG(Int, jint, ARG_TO_INT)
@@ -233,7 +223,7 @@ TYPE Java_juloo_javacaml_Caml_call##NAME(JNIEnv *env, jclass c) \
 #define CALL_OF_BOOL(env, v)	Bool_val(v)
 #define CALL_OF_INT32(env, v)	Int32_val(v)
 #define CALL_OF_INT64(env, v)	Int64_val(v)
-#define CALL_OF_VALUE(env, v)	jvalue_new(env, v)
+#define CALL_OF_VALUE(env, v)	JVALUE_NEW(env, v)
 #define CALL_OF_OBJECT(env, v)	((v == Java_null_val) ? NULL : Java_obj_val(v))
 CALL(Unit, void, CALL_OF_UNIT,)
 CALL(Int, jint, CALL_OF_INT, 0)
@@ -350,6 +340,7 @@ static JNINativeMethod native_methods[] = {
 	N(argInt32, "(I)V",),
 	N(argInt64, "(J)V",),
 	N(argValue, "(Ljuloo/javacaml/Value;)V",),
+	N(argObject, "(Ljava/lang/Object;)V",),
 	N(callUnit, "()V",),
 	N(callInt, "()I",),
 	N(callFloat, "()D",),
@@ -358,6 +349,7 @@ static JNINativeMethod native_methods[] = {
 	N(callInt32, "()I",),
 	N(callInt64, "()J",),
 	N(callValue, "()Ljuloo/javacaml/Value;",),
+	N(callObject, "()Ljava/lang/Object;",),
 };
 
 #undef N
@@ -387,7 +379,8 @@ void ocaml_java__javacaml_init(JNIEnv *env)
 		(*env)->ExceptionClear(env);
 		return ;
 	}
-	register_natives(env);
+	if (!register_natives(env))
+		caml_failwith("Failed to link javacaml");
 }
 
 #else
