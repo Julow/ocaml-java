@@ -9,11 +9,11 @@
 // Copy the content of `str` into a new OCaml string
 static value jstring_to_cstring(JNIEnv *env, jstring str)
 {
-	char const *const str_utf = (*env)->GetStringUTFChars(env, str, NULL);
+	jsize const len = (*env)->GetStringUTFLength(env, str);
 	value cstr;
 
-	cstr = caml_copy_string(str_utf);
-	(*env)->ReleaseStringUTFChars(env, str, str_utf);
+	cstr = caml_alloc_string(len);
+	(*env)->GetStringUTFRegion(env, str, 0, len, (char*)String_val(cstr));
 	return cstr;
 }
 
