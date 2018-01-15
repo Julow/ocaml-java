@@ -28,49 +28,58 @@ struct
 
 	external find_class : string -> t = "ocaml_java__find_class"
 
-	external get_meth : t -> string -> string -> meth =
-		"ocaml_java__class_get_meth"
+	external get_meth : t -> string -> string -> meth
+		= "ocaml_java__class_get_meth"
 
-	external get_meth_static : t -> string -> string -> meth_static =
-		"ocaml_java__class_get_meth_static"
+	external get_meth_static : t -> string -> string -> meth_static
+		= "ocaml_java__class_get_meth_static"
 
-	external get_constructor : t -> string -> meth_constructor =
-		"ocaml_java__class_get_constructor"
+	external get_constructor : t -> string -> meth_constructor
+		= "ocaml_java__class_get_constructor"
 
-	external get_field : t -> string -> string -> field =
-		"ocaml_java__class_get_field"
+	external get_field : t -> string -> string -> field
+		= "ocaml_java__class_get_field"
 
-	external get_field_static : t -> string -> string -> field_static =
-		"ocaml_java__class_get_field_static"
+	external get_field_static : t -> string -> string -> field_static
+		= "ocaml_java__class_get_field_static"
 
 end
 
 external meth : obj -> meth -> unit = "ocaml_java__calling_meth"
 
-external meth_static : Class.t -> meth_static -> unit =
-	"ocaml_java__calling_meth_static"
+external meth_static : Class.t -> meth_static -> unit
+	= "ocaml_java__calling_meth_static" [@@noalloc]
 
-external meth_nonvirtual : obj -> Class.t -> meth -> unit =
-	"ocaml_java__calling_meth_nonvirtual"
+external meth_nonvirtual : obj -> Class.t -> meth -> unit
+	= "ocaml_java__calling_meth_nonvirtual"
 
-external new_ : Class.t -> meth_constructor -> unit = "ocaml_java__calling_init"
+external new_ : Class.t -> meth_constructor -> unit
+	= "ocaml_java__calling_init" [@@noalloc]
 
 external field : obj -> field -> unit = "ocaml_java__calling_field"
 
-external field_static : Class.t -> field_static -> unit =
-	"ocaml_java__calling_field_static"
+external field_static : Class.t -> field_static -> unit
+	= "ocaml_java__calling_field_static" [@@noalloc]
 
-external arg_int : int -> unit = "ocaml_java__arg_int"
-external arg_float : float -> unit = "ocaml_java__arg_float"
-external arg_double : float -> unit = "ocaml_java__arg_double"
-external arg_string : string -> unit = "ocaml_java__arg_string"
-external arg_bool : bool -> unit = "ocaml_java__arg_bool"
-external arg_char : char -> unit = "ocaml_java__arg_char"
-external arg_int8 : int -> unit = "ocaml_java__arg_int8"
-external arg_int16 : int -> unit = "ocaml_java__arg_int16"
-external arg_int32 : int32 -> unit = "ocaml_java__arg_int32"
-external arg_int64 : int64 -> unit = "ocaml_java__arg_int64"
-external arg_obj : obj -> unit = "ocaml_java__arg_obj"
+external arg_int : int -> unit = "ocaml_java__arg_int" [@@noalloc]
+external arg_float : (float [@unboxed]) -> unit
+	= "ocaml_java__arg_float" "ocaml_java__arg_float_unboxed"
+	[@@noalloc]
+external arg_double : (float [@unboxed]) -> unit
+	= "ocaml_java__arg_double" "ocaml_java__arg_double_unboxed"
+	[@@noalloc]
+external arg_string : string -> unit = "ocaml_java__arg_string" [@@noalloc]
+external arg_bool : bool -> unit = "ocaml_java__arg_bool" [@@noalloc]
+external arg_char : char -> unit = "ocaml_java__arg_char" [@@noalloc]
+external arg_int8 : int -> unit = "ocaml_java__arg_int8" [@@noalloc]
+external arg_int16 : int -> unit = "ocaml_java__arg_int16" [@@noalloc]
+external arg_int32 : (int32 [@unboxed]) -> unit
+	= "ocaml_java__arg_int32" "ocaml_java__arg_int32_unboxed"
+	[@@noalloc]
+external arg_int64 : (int64 [@unboxed]) -> unit
+	= "ocaml_java__arg_int64" "ocaml_java__arg_int64_unboxed"
+	[@@noalloc]
+external arg_obj : obj -> unit = "ocaml_java__arg_obj" [@@noalloc]
 external arg_value : 'a -> unit = "ocaml_java__arg_value"
 
 external call_unit : unit -> unit = "ocaml_java__call_unit"

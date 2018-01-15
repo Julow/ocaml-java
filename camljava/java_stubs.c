@@ -222,21 +222,29 @@ value ocaml_java__arg_##NAME(value v)		\
 	return Val_unit;						\
 }
 
+#define ARG_UNBOXED(NAME, DST, TYPE) \
+void ocaml_java__arg_##NAME##_unboxed(TYPE v)	\
+{												\
+	arg_stack[arg_count].DST = v;				\
+	arg_count++;								\
+}
+
 #define ARG_TO_OBJ(v) ((v == Java_null_val) ? NULL : Java_obj_val(v))
 ARG(int, i, Long_val)
-ARG(float, f, Double_val)
-ARG(double, d, Double_val)
+ARG(float, f, Double_val) ARG_UNBOXED(float, f, double)
+ARG(double, d, Double_val) ARG_UNBOXED(double, d, double)
 ARG(string, l, arg_string)
 ARG(bool, z, Bool_val)
 ARG(char, c, Long_val)
 ARG(int8, b, Long_val)
 ARG(int16, s, Long_val)
-ARG(int32, i, Int32_val)
-ARG(int64, j, Int64_val)
+ARG(int32, i, Int32_val) ARG_UNBOXED(int32, i, int32_t)
+ARG(int64, j, Int64_val) ARG_UNBOXED(int64, j, int64_t)
 ARG(obj, l, ARG_TO_OBJ)
 ARG(value, l, arg_value)
 
 #undef ARG
+#undef ARG_UNBOXED
 
 // Call
 
