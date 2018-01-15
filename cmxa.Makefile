@@ -1,0 +1,77 @@
+# -
+# Required variables:
+#  BUILD_DIR
+#  TARGET_DIR
+
+B = $(BUILD_DIR)
+T = $(TARGET_DIR)
+
+OCAMLFIND = ocamlfind
+OCAMLOPT = $(OCAMLFIND) ocamlopt
+OCAML_WHERE := $(shell $(OCAMLFIND) ocamlc -where)
+
+CCINCLUDES = \
+	-I $(JAVA_HOME)/include \
+	-I javacaml \
+	-I camljava \
+	-I $(OCAML_WHERE) \
+	-I $(CAMLJAVA_DIR)
+
+CCFLAGS = -Wall -Wextra -O2 -fPIC $(CCINCLUDES) $(EXTRA_CCFLAGS)
+OCAMLOPTFLAGS = -I $(B) -I $(T)
+
+# -
+
+CMX_FILES = $(B)/java.cmx
+
+$(B)/java.o $(B)/java.cmx: camljava/java.ml $(T)/java.cmi | $(B)
+$(T)/java.cmi: camljava/java.mli | $(T)
+
+clean::
+	rm -f $(B)/java.o $(B)/java.cmx $(T)/java.cmi
+
+OBJ_FILES = $(B)/java_stubs.o $(B)/caml.o
+
+$(B)/java_stubs.o: camljava/java_stubs.c | $(B)
+$(B)/caml.o: javacaml/caml.c | $(B)
+
+clean::
+	rm -f $(B)/java_stubs.o $(B)/caml.o
+
+$(T)/camljava.a $(T)/camljava.cmxa: | $(T)/libcamljava.a
+$(T)/javacaml.a $(T)/javacaml.cmxa: | $(T)/libjavacaml.a
+
+$(T)/camljava.cmxa: LINK = -lcamljava
+$(T)/javacaml.cmxa: LINK = -ljavacaml
+#
+
+$(T)/camljava.cmxa $(T)/javacaml.cmxa: $(CMX_FILES) | $(T)
+	$(OCAMLOPT) $(OCAMLOPTFLAGS) -linkall -a \
+		-cclib "$(CCLIBS) $(LINK)" \
+		-o $@ $^
+
+$(T)/libcamljava.a $(T)/libjavacaml.a: $(OBJ_FILES) | $(T)
+	ar rcs $@ $^
+
+clean::
+	rm -f $(T)/camljava.cmxa $(T)/javacaml.cmxa
+	rm -f $(T)/camljava.a $(T)/javacaml.a
+	rm -f $(T)/libcamljava.a $(T)/libjavacaml.a
+
+# -
+
+%.o:
+	$(OCAMLOPT) $(OCAMLOPTFLAGS) -c -ccopt "$(CCFLAGS) -o $@" $<
+
+%.cmi:
+	$(OCAMLOPT) $(OCAMLOPTFLAGS) -c -o $@ $<
+
+%.cmx:
+	$(OCAMLOPT) $(OCAMLOPTFLAGS) -c -o $@ $<
+
+# -
+
+$(sort $(B) $(T)):
+	mkdir -p $@
+
+.PHONY: clean
