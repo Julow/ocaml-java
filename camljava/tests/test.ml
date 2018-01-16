@@ -80,6 +80,9 @@ let test () =
 	test "float" "F" arg_float call_float 2.0;
 	test "double" "D" arg_double call_double 3.0;
 	test "string" "Ljava/lang/String;" arg_string call_string "4";
+	test "string" "Ljava/lang/String;"
+		(function Some s -> arg_string s | None -> assert false)
+		call_string_opt (Some "4");
 	test "boolean" "Z" arg_bool call_bool true;
 	test "char" "C" arg_char call_char '5';
 	test "byte" "B" arg_int8 call_int8 6;
@@ -88,24 +91,43 @@ let test () =
 	test "int64" "J" arg_int64 call_int64 (Int64.of_int 9);
 	Callback.register "get_int_pair" (fun () -> (1, 2));
 	test "value" "Ljuloo/javacaml/Value;" arg_value call_value (1, 2);
+	test "value" "Ljuloo/javacaml/Value;"
+		(function Some v -> arg_value v | None -> assert false)
+		call_value_opt (Some (1, 2));
 
-	let id_m = Class.get_meth cls "test_id" "(Ljava/lang/Object;)Ljava/lang/Object;" in
+	let id_obj_m = Class.get_meth cls "test_id" "(Ljava/lang/Object;)Ljava/lang/Object;" in
+
+	let test_id arg call v =
+		meth obj id_obj_m;
+		arg v;
+		assert (call () = v)
+	in
+
+	test_id arg_string call_string "abcdef";
+	test_id arg_value call_value "abcdef";
+	test_id arg_obj call_obj null;
 
 	begin try
-		meth obj id_m;
-		arg_obj null;
-		call_value ();
+		test_id arg_obj call_value null;
 		assert false
 	with Failure _ -> ()
 	end;
 
 	begin try
-		meth obj id_m;
+		meth obj id_obj_m;
 		arg_obj null;
 		call_string ();
 		assert false
 	with Failure _ -> ()
 	end;
+
+	meth obj id_obj_m;
+	arg_obj null;
+	assert (call_string_opt () = None);
+
+	meth obj id_obj_m;
+	arg_obj null;
+	assert (call_value_opt () = None);
 
 	begin try
 		meth obj (get_meth cls "raise" "()V");

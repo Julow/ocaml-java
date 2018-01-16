@@ -316,6 +316,24 @@ static value conv_call_value(jobject v)
 	return JVALUE_GET(env, v);
 }
 
+static value conv_call_string_opt(jstring str)
+{
+	CAMLparam0();
+	CAMLlocal1(cstr);
+	if (IS_NULL(env, str)) CAMLreturn(Val_none);
+	cstr = jstring_to_cstring(env, str);
+	CAMLreturn(copy_some(cstr));
+}
+
+static value conv_call_value_opt(jobject v)
+{
+	CAMLparam0();
+	CAMLlocal1(jvalue);
+	if (IS_NULL(env, v)) CAMLreturn(Val_none);
+	jvalue = JVALUE_GET(env, v);
+	CAMLreturn(copy_some(jvalue));
+}
+
 #define P_INIT_DISABLED(n) DISABLED("Java.new_: Java.call_" n)
 
 #define CONV_UNIT(v)		Val_unit
@@ -327,6 +345,8 @@ CALL(float, jfloat, Float, caml_copy_double, P_INIT_DISABLED("float"), ENABLED,)
 CALL(double, jdouble, Double, caml_copy_double, P_INIT_DISABLED("double"), ENABLED,)
 CALL(string, jobject, Object, conv_call_string,
 	(jobject)(long)P_INIT_DISABLED("string"), ENABLED,)
+CALL(string_opt, jobject, Object, conv_call_string_opt,
+	(jobject)(long)P_INIT_DISABLED("string"), ENABLED,)
 CALL(bool, jboolean, Boolean, Val_bool, P_INIT_DISABLED("bool"), ENABLED,)
 CALL(char, jchar, Char, Val_long, P_INIT_DISABLED("char"), ENABLED,)
 CALL(int8, jbyte, Byte, Val_long, P_INIT_DISABLED("int8"), ENABLED,)
@@ -335,6 +355,8 @@ CALL(int32, jint, Int, caml_copy_int32, P_INIT_DISABLED("int32"), ENABLED,)
 CALL(int64, jlong, Long, caml_copy_int64, P_INIT_DISABLED("int64"), ENABLED,)
 CALL(obj, jobject, Object, CONV_OBJ, ENABLED, ENABLED,)
 CALL(value, jobject, Object, conv_call_value,
+	(void*)(long)P_INIT_DISABLED("value"), ENABLED,)
+CALL(value_opt, jobject, Object, conv_call_value_opt,
 	(void*)(long)P_INIT_DISABLED("value"), ENABLED,)
 
 #undef CALL
