@@ -137,6 +137,15 @@ let test () =
 		assert (Throwable.get_message ex = "test")
 	end;
 
+	assert (instanceof obj cls);
+	assert (not (instanceof obj (Class.find_class "java/lang/String")));
+	assert (sameobject obj obj);
+	assert (sameobject null null);
+	assert (not (sameobject obj null));
+	assert (not (sameobject null obj));
+	assert (sameobject (Obj.magic (objectclass obj)) (Obj.magic cls));
+	begin try objectclass null; assert false with Failure _ -> () end;
+
 	let m_rec_b = get_meth_static cls "test_rec_b" "(Ljava/lang/String;)Ljava/lang/String;" in
 
 	let test_rec_a s =

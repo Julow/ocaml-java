@@ -45,6 +45,12 @@ struct
 
 end
 
+external instanceof : obj -> Class.t -> bool = "ocaml_java__instanceof"
+
+external sameobject : obj -> obj -> bool = "ocaml_java__sameobject"
+
+external objectclass : obj -> Class.t = "ocaml_java__objectclass"
+
 external meth : obj -> meth -> unit = "ocaml_java__calling_meth"
 
 external meth_static : Class.t -> meth_static -> unit

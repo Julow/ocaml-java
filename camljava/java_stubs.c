@@ -15,7 +15,8 @@ static JNIEnv *env;
 
 /*
 ** ========================================================================== **
-** java_obj custom ops (alloc_java_obj)
+** Java.obj
+** Hold a reference to a Java object
 */
 
 static void java_obj_finalize(value v)
@@ -43,6 +44,34 @@ struct custom_operations ocamljava__java_obj_custom_ops = {
 	.serialize = custom_serialize_default,
 	.deserialize = custom_deserialize_default
 };
+
+value ocaml_java__instanceof(value obj, value cls)
+{
+	if (obj != Java_null_val
+		&& (*env)->IsInstanceOf(env, Java_obj_val(obj), Java_obj_val(cls)))
+		return Val_true;
+	return Val_false;
+}
+
+value ocaml_java__sameobject(value a, value b)
+{
+	jobject const obj_a = Java_obj_val_opt(a);
+	jobject const obj_b = Java_obj_val_opt(b);
+
+	if ((*env)->IsSameObject(env, obj_a, obj_b))
+		return Val_true;
+	return Val_false;
+}
+
+value ocaml_java__objectclass(value obj)
+{
+	jclass cls;
+
+	if (obj == Java_null_val)
+		caml_failwith("Java.objectclass: null");
+	cls = (*env)->GetObjectClass(env, Java_obj_val(obj));
+	return alloc_java_obj(env, cls);
+}
 
 /*
 ** ========================================================================== **
@@ -229,7 +258,6 @@ void ocaml_java__arg_##NAME##_unboxed(TYPE v)	\
 	arg_count++;								\
 }
 
-#define ARG_TO_OBJ(v) ((v == Java_null_val) ? NULL : Java_obj_val(v))
 ARG(int, i, Long_val)
 ARG(float, f, Double_val) ARG_UNBOXED(float, f, double)
 ARG(double, d, Double_val) ARG_UNBOXED(double, d, double)
@@ -240,7 +268,7 @@ ARG(int8, b, Long_val)
 ARG(int16, s, Long_val)
 ARG(int32, i, Int32_val) ARG_UNBOXED(int32, i, int32_t)
 ARG(int64, j, Int64_val) ARG_UNBOXED(int64, j, int64_t)
-ARG(obj, l, ARG_TO_OBJ)
+ARG(obj, l, Java_obj_val_opt)
 ARG(value, l, arg_value)
 
 #undef ARG
@@ -306,13 +334,13 @@ value ocaml_java__call_##NAME(value unit)							\
 
 static value conv_call_string(jstring str)
 {
-	if (IS_NULL(env, str)) caml_failwith("Null string");
+	if (IS_NULL(env, str)) caml_failwith("Java.call_string: Null string");
 	return jstring_to_cstring(env, str);
 }
 
 static value conv_call_value(jobject v)
 {
-	if (IS_NULL(env, v)) caml_failwith("Null value");
+	if (IS_NULL(env, v)) caml_failwith("Java.call_value: Null value");
 	return JVALUE_GET(env, v);
 }
 

@@ -64,6 +64,23 @@ module Class : sig
 
 end
 
+(** `instanceof o cls`
+	Returns `true` if `o` is an instance of the class `cls`
+	and is not `null`
+	or `false` otherwise *)
+external instanceof : obj -> Class.t -> bool = "ocaml_java__instanceof"
+
+(** `sameobject a b`
+	Returns `true` if `a` and `b` refer to the same object or false otherwise
+	Not the same as `(=)` because `(=)` only compare references
+	while many difference references may point to the same object
+	(eg. global or weak references) *)
+external sameobject : obj -> obj -> bool = "ocaml_java__sameobject"
+
+(** Returns the class of an object
+	Raises `Failure` if the object is `null` *)
+external objectclass : obj -> Class.t = "ocaml_java__objectclass"
+
 (** Calling a function
 	-
 	Begins the calling of a function with a call to one of:

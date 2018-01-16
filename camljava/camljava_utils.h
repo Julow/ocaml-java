@@ -33,12 +33,15 @@ void ocaml_java__camljava_init(JNIEnv *_env);
 ** -
 ** Java_obj_val(v)		Returns the `jobject` pointer, must not be `null`
 ** Java_null_val		`null` value
+** Java_obj_val_opt(v)	Returns the `jobject` pointer or `null`
 ** alloc_java_obj(obj)	Allocates the value, `obj` is registered as global ref
 */
 
 #define Java_obj_val(v)	(*(jobject*)Data_custom_val(v))
 
 #define Java_null_val	(Val_long(0))
+
+#define Java_obj_val_opt(v)	(((v) == Java_null_val) ? NULL : Java_obj_val(v))
 
 extern struct custom_operations ocamljava__java_obj_custom_ops;
 
