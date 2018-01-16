@@ -2,20 +2,18 @@
 # Required variables:
 #  BUILD_DIR
 #  TARGET_DIR
+#  JAVA_INCLUDES
 
 B = $(BUILD_DIR)
 T = $(TARGET_DIR)
 
 OCAMLFIND = ocamlfind
 OCAMLOPT = $(OCAMLFIND) ocamlopt
-OCAML_WHERE := $(shell $(OCAMLFIND) ocamlc -where)
 
 CCINCLUDES = \
-	-I $(JAVA_HOME)/include \
+	$(JAVA_INCLUDES) \
 	-I javacaml \
-	-I camljava \
-	-I $(OCAML_WHERE) \
-	-I $(CAMLJAVA_DIR)
+	-I camljava
 
 CCFLAGS = -Wall -Wextra -O2 -fPIC $(CCINCLUDES) $(EXTRA_CCFLAGS)
 OCAMLOPTFLAGS = -I $(B) -I $(T)

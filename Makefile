@@ -1,11 +1,24 @@
 # -
+# Required variables:
+#  JAVA_HOME
+#
+# Configs:
+#  BUILD_DIR
+#  TARGET_DIR
+#  OCAMLFIND
+#  JAVA_INCLUDES
+#  JAVACFLAGS
 
 BUILD_DIR = bin
-TARGET_DIR = .
+TARGET_DIR = bin
 
 T = $(TARGET_DIR)
 
 all: $(T)/camljava.cmxa $(T)/javacaml.cmxa $(T)/ocaml-java.jar
+
+export JAVA_INCLUDES = \
+	-I $(JAVA_HOME)/include \
+	-I $(JAVA_HOME)/include/linux
 
 MAKE_CAMLJAVA = make -f cmxa.Makefile \
 		BUILD_DIR=$(BUILD_DIR)/camljava \

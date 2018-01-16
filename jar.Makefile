@@ -2,6 +2,9 @@
 # Required variables:
 #  BUILD_DIR
 #  TARGET_DIR
+# -
+# Configs:
+#  JAVACFLAGS
 
 B = $(BUILD_DIR)
 T = $(TARGET_DIR)
@@ -27,7 +30,7 @@ clean::
 	rm -f $(CLASS_FILES)
 
 $(B)/%.class: javacaml/%.java | $(B)
-	javac -sourcepath javacaml -d $(B) $<
+	javac $(JAVACFLAGS) -sourcepath javacaml -d $(B) $<
 
 $(sort $(B) $(T)):
 	mkdir -p $@
