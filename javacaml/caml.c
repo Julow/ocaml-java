@@ -26,7 +26,6 @@ static jfieldID
 	Callback_closure,
 	Value_value;
 
-#define IS_NULL(env, OBJ) ((*env)->IsSameObject(env, OBJ, NULL))
 #define THROW_NULLPTR(env, ARG_NAME) \
 		((*env)->ThrowNew(env, NullPointerException, \
 			"Called with null `" ARG_NAME "`"), \

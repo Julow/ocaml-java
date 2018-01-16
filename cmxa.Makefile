@@ -39,7 +39,7 @@ clean::
 $(T)/camljava.a $(T)/camljava.cmxa: | $(T)/libcamljava.a
 $(T)/javacaml.a $(T)/javacaml.cmxa: | $(T)/libjavacaml.a
 
-$(T)/camljava.cmxa: LINK = -lcamljava
+$(T)/camljava.cmxa: LINK = -lcamljava -ljvm
 $(T)/javacaml.cmxa: LINK = -ljavacaml
 #
 

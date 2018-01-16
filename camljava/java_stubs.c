@@ -304,23 +304,28 @@ value ocaml_java__call_##NAME(value unit)							\
 	(void)unit;														\
 }
 
-static value conv_string(jstring str)
+static value conv_call_string(jstring str)
 {
-	if (str == NULL) caml_failwith("Null string");
+	if (IS_NULL(env, str)) caml_failwith("Null string");
 	return jstring_to_cstring(env, str);
+}
+
+static value conv_call_value(jobject v)
+{
+	if (IS_NULL(env, v)) caml_failwith("Null value");
+	return JVALUE_GET(env, v);
 }
 
 #define P_INIT_DISABLED(n) DISABLED("Java.new_: Java.call_" n)
 
 #define CONV_UNIT(v)		Val_unit
 #define CONV_OBJ(v)			alloc_java_obj(env, v)
-#define CONV_VALUE(v)		JVALUE_GET(env, v)
 CALL(unit, int /* dummy */, Void, CONV_UNIT, P_INIT_DISABLED("unit"),
 	DISABLED("Java.field: Java.call_unit"), 0;(void)res;(void))
 CALL(int, jint, Int, Val_long, P_INIT_DISABLED("int"), ENABLED,)
 CALL(float, jfloat, Float, caml_copy_double, P_INIT_DISABLED("float"), ENABLED,)
 CALL(double, jdouble, Double, caml_copy_double, P_INIT_DISABLED("double"), ENABLED,)
-CALL(string, jobject, Object, conv_string,
+CALL(string, jobject, Object, conv_call_string,
 	(jobject)(long)P_INIT_DISABLED("string"), ENABLED,)
 CALL(bool, jboolean, Boolean, Val_bool, P_INIT_DISABLED("bool"), ENABLED,)
 CALL(char, jchar, Char, Val_long, P_INIT_DISABLED("char"), ENABLED,)
@@ -329,7 +334,7 @@ CALL(int16, jshort, Short, Val_long, P_INIT_DISABLED("int16"), ENABLED,)
 CALL(int32, jint, Int, caml_copy_int32, P_INIT_DISABLED("int32"), ENABLED,)
 CALL(int64, jlong, Long, caml_copy_int64, P_INIT_DISABLED("int64"), ENABLED,)
 CALL(obj, jobject, Object, CONV_OBJ, ENABLED, ENABLED,)
-CALL(value, jobject, Object, CONV_VALUE,
+CALL(value, jobject, Object, conv_call_value,
 	(void*)(long)P_INIT_DISABLED("value"), ENABLED,)
 
 #undef CALL

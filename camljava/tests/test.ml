@@ -68,11 +68,13 @@ let test () =
 		and id_m = Class.get_meth cls "test_id" ("(" ^ sigt ^ ")" ^ sigt) in
 		meth obj get_m;
 		let v = call () in
-		assert (v = expected);
+		(if v <> expected then
+			failwith ("test_get failure: " ^ tname));
 		meth obj id_m;
 		arg v;
 		let v' = call () in
-		assert (v = v')
+		(if v <> v' then
+			failwith ("test_id failure: " ^ tname))
 	in
 	test "int" "I" arg_int call_int 1;
 	test "float" "F" arg_float call_float 2.0;
@@ -86,6 +88,24 @@ let test () =
 	test "int64" "J" arg_int64 call_int64 (Int64.of_int 9);
 	Callback.register "get_int_pair" (fun () -> (1, 2));
 	test "value" "Ljuloo/javacaml/Value;" arg_value call_value (1, 2);
+
+	let id_m = Class.get_meth cls "test_id" "(Ljava/lang/Object;)Ljava/lang/Object;" in
+
+	begin try
+		meth obj id_m;
+		arg_obj null;
+		call_value ();
+		assert false
+	with Failure _ -> ()
+	end;
+
+	begin try
+		meth obj id_m;
+		arg_obj null;
+		call_string ();
+		assert false
+	with Failure _ -> ()
+	end;
 
 	begin try
 		meth obj (get_meth cls "raise" "()V");
@@ -124,7 +144,7 @@ let () =
 	let jar_files = [
 		"test.jar";
 		"../../javacaml/tests/test.jar";
-		"../../javacaml/bin/javacaml.jar"
+		"../../bin/ocaml-java.jar"
 	] in
 	(* quick check if executed from javacaml's tests *)
 	if Sys.argv.(0) <> "" then begin
@@ -134,7 +154,7 @@ let () =
 		|];
 		try
 			test ();
-			test_javacaml ()
+			(* test_javacaml *) ()
 		with Java.Exception e ->
 			Throwable.print_stack_trace e;
 			failwith ""

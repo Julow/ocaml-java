@@ -6,6 +6,9 @@
 #include <caml/memory.h>
 #include <caml/alloc.h>
 
+// Check if a `jobject` is `null`
+#define IS_NULL(env, OBJ) ((*env)->IsSameObject(env, OBJ, NULL))
+
 // Copy the content of `str` into a new OCaml string
 static value jstring_to_cstring(JNIEnv *env, jstring str)
 {

@@ -20,6 +20,9 @@ export JAVA_INCLUDES = \
 	-I $(JAVA_HOME)/include \
 	-I $(JAVA_HOME)/include/linux
 
+export CCLIBS = \
+	-L $(JAVA_HOME)/jre/lib/amd64/server
+
 MAKE_CAMLJAVA = make -f cmxa.Makefile \
 		BUILD_DIR=$(BUILD_DIR)/camljava \
 		TARGET_DIR=$(TARGET_DIR) \
