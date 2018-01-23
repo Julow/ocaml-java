@@ -45,7 +45,7 @@ void ocaml_java__camljava_init(JNIEnv *_env);
 
 extern struct custom_operations ocamljava__java_obj_custom_ops;
 
-static value alloc_java_obj(JNIEnv *env, jobject object)
+static inline value alloc_java_obj(JNIEnv *env, jobject object)
 {
 	value v;
 

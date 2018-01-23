@@ -103,40 +103,17 @@ static void check_exceptions(void)
 ** Calling
 ** -
 ** `arg_stack` represents the argument stack
-** `perform_type` stores the type of call
 ** `local_ref_stack` stores references to objects allocated in `arg_` functions
-**  It is `NULL`-terminated
 **  Local references are deleted after the method as been called
-** -
-** Perform types and begining of the stack:
-**  - PERFORM_NONVIRTUAL_CALL (CallNonvirtual*Method*)
-**    arg_stack (3): object, class, methodId
-**  - PERFORM_STATIC_CALL (CallStatic*Method*)
-**    arg_stack (2): class, methodId
-**  - PERFORM_CALL (Call*Method*)
-**    arg_stack (2): object, methodId
-**  - PERFORM_INIT (NewObject*)
-**    arg_stack (2): class, methodId
 */
 
 #define ARG_STACK_MAX_SIZE	16
 #define LOCALREF_STACK_MAX_SIZE	32
 
-enum e_perform_type
-{
-	PERFORM_NONVIRTUAL_CALL,
-	PERFORM_STATIC_CALL,
-	PERFORM_CALL,
-	PERFORM_INIT,
-	PERFORM_FIELD,
-	PERFORM_FIELD_STATIC,
-};
-
-static enum e_perform_type perform_type;
 static jvalue arg_stack[ARG_STACK_MAX_SIZE];
 static int arg_count;
 
-// Local refs
+// // Local refs
 
 static jobject local_ref_stack[LOCALREF_STACK_MAX_SIZE];
 static int local_ref_count = 0;
@@ -157,240 +134,6 @@ static void push_local_ref(jobject obj)
 	local_ref_stack[local_ref_count] = obj;
 	local_ref_count++;
 }
-
-// Calling
-
-value ocaml_java__calling_meth(value obj, value meth)
-{
-	if (obj == Java_null_val)
-		caml_invalid_argument("Java.meth: `object` is null");
-	arg_stack[0].l = Java_obj_val(obj);
-	arg_stack[1].l = (jobject)Nativeint_val(meth);
-	arg_count = 2;
-	perform_type = PERFORM_CALL;
-	return Val_unit;
-}
-
-value ocaml_java__calling_meth_static(value class_, value meth)
-{
-	arg_stack[0].l = Java_obj_val(class_);
-	arg_stack[1].l = (jobject)Nativeint_val(meth);
-	arg_count = 2;
-	perform_type = PERFORM_STATIC_CALL;
-	return Val_unit;
-}
-
-value ocaml_java__calling_meth_nonvirtual(value obj, value class_, value meth)
-{
-	if (obj == Java_null_val)
-		caml_invalid_argument("Java.meth_nonvirtual: `object` is null");
-	arg_stack[0].l = Java_obj_val(obj);
-	arg_stack[1].l = Java_obj_val(class_);
-	arg_stack[2].l = (jobject)Nativeint_val(meth);
-	arg_count = 3;
-	perform_type = PERFORM_NONVIRTUAL_CALL;
-	return Val_unit;
-}
-
-value ocaml_java__calling_init(value class_, value meth)
-{
-	arg_stack[0].l = Java_obj_val(class_);
-	arg_stack[1].l = (jobject)Nativeint_val(meth);
-	arg_count = 2;
-	perform_type = PERFORM_INIT;
-	return Val_unit;
-}
-
-value ocaml_java__calling_field(value obj, value field)
-{
-	if (obj == Java_null_val)
-		caml_invalid_argument("Java.field: `object` is null");
-	arg_stack[0].l = Java_obj_val(obj);
-	arg_stack[1].l = (jobject)Nativeint_val(field);
-	arg_count = 2;
-	perform_type = PERFORM_FIELD;
-	return Val_unit;
-}
-
-value ocaml_java__calling_field_static(value class_, value field)
-{
-	arg_stack[0].l = Java_obj_val(class_);
-	arg_stack[1].l = (jobject)Nativeint_val(field);
-	arg_count = 2;
-	perform_type = PERFORM_FIELD_STATIC;
-	return Val_unit;
-}
-
-// Arg
-
-static jobject arg_string(value v)
-{
-	jstring const js = (*env)->NewStringUTF(env, String_val(v));
-
-	push_local_ref(js);
-	return js;
-}
-
-static jobject arg_value(value v)
-{
-	jobject const obj = JVALUE_NEW(env, v);
-
-	push_local_ref(obj);
-	return obj;
-}
-
-// Generate a Java.arg_ function with name `NAME`
-// `DST` is the field in jvalue
-// `CONV` is the function that convert from OCaml value to Java type
-//  object allocated on the Java heap must be added to local_ref_stack
-#define ARG(NAME, DST, CONV) \
-value ocaml_java__arg_##NAME(value v)		\
-{											\
-	arg_stack[arg_count].DST = CONV(v);		\
-	arg_count++;							\
-	return Val_unit;						\
-}
-
-#define ARG_UNBOXED(NAME, DST, TYPE) \
-void ocaml_java__arg_##NAME##_unboxed(TYPE v)	\
-{												\
-	arg_stack[arg_count].DST = v;				\
-	arg_count++;								\
-}
-
-ARG(int, i, Long_val)
-ARG(float, f, Double_val) ARG_UNBOXED(float, f, double)
-ARG(double, d, Double_val) ARG_UNBOXED(double, d, double)
-ARG(string, l, arg_string)
-ARG(bool, z, Bool_val)
-ARG(char, c, Long_val)
-ARG(int8, b, Long_val)
-ARG(int16, s, Long_val)
-ARG(int32, i, Int32_val) ARG_UNBOXED(int32, i, int32_t)
-ARG(int64, j, Int64_val) ARG_UNBOXED(int64, j, int64_t)
-ARG(obj, l, Java_obj_val_opt)
-ARG(value, l, arg_value)
-
-#undef ARG
-#undef ARG_UNBOXED
-
-// Call
-
-#define ENABLED(a) a
-#define DISABLED_(a)
-#define DISABLED(msg) (caml_failwith(msg), 0) DISABLED_
-
-// Generate a Java.call_ function with name `NAME`
-// `CONV` is the function that convert from the java type to `value`
-// `INIT_ENABLED` and `FIELD_ENABLED` can be used to disable the
-//   `PERFORM_INIT`, `PERFORM_FIELD` and `PERFORM_FIELD_STATIC` cases
-#define CALL(NAME, JTYPE, MNAME, CONV, INIT_ENABLED, FIELD_ENABLED, FIX) \
-value ocaml_java__call_##NAME(value unit)							\
-{																	\
-	JTYPE res = 0;													\
-	switch (perform_type)											\
-	{																\
-	case PERFORM_NONVIRTUAL_CALL:									\
-		res = FIX (*env)->CallNonvirtual##MNAME##MethodA(env,		\
-						arg_stack[0].l,								\
-			(jclass)	arg_stack[1].l,								\
-			(jmethodID)	arg_stack[2].l,								\
-						arg_stack + 3);								\
-		break ;														\
-	case PERFORM_STATIC_CALL:										\
-		res = FIX (*env)->CallStatic##MNAME##MethodA(env,			\
-			(jclass)	arg_stack[0].l,								\
-			(jmethodID)	arg_stack[1].l,								\
-						arg_stack + 2);								\
-		break ;														\
-	case PERFORM_CALL:												\
-		res = FIX (*env)->Call##MNAME##MethodA(env,					\
-						arg_stack[0].l,								\
-			(jmethodID)	arg_stack[1].l,								\
-						arg_stack + 2);								\
-		break ;														\
-	case PERFORM_INIT:												\
-		res = FIX INIT_ENABLED((*env)->NewObjectA(env,				\
-			(jclass)	arg_stack[0].l,								\
-			(jmethodID)	arg_stack[1].l,								\
-						arg_stack + 2));							\
-		break ;														\
-	case PERFORM_FIELD:												\
-		res = FIX FIELD_ENABLED((*env)->Get##MNAME##Field(env,		\
-						arg_stack[0].l,								\
-			(jfieldID)	arg_stack[1].l));							\
-		break ;														\
-	case PERFORM_FIELD_STATIC:										\
-		res = FIX FIELD_ENABLED((*env)->GetStatic##MNAME##Field(env, \
-			(jclass)	arg_stack[0].l,								\
-			(jfieldID)	arg_stack[1].l));							\
-		break ;														\
-	}																\
-	clear_local_refs();												\
-	check_exceptions();												\
-	return CONV(res);												\
-	(void)unit;														\
-}
-
-static value conv_call_string(jstring str)
-{
-	if (IS_NULL(env, str)) caml_failwith("Java.call_string: Null string");
-	return jstring_to_cstring(env, str);
-}
-
-static value conv_call_value(jobject v)
-{
-	if (IS_NULL(env, v)) caml_failwith("Java.call_value: Null value");
-	return JVALUE_GET(env, v);
-}
-
-static value conv_call_string_opt(jstring str)
-{
-	CAMLparam0();
-	CAMLlocal1(cstr);
-	if (IS_NULL(env, str)) CAMLreturn(Val_none);
-	cstr = jstring_to_cstring(env, str);
-	CAMLreturn(copy_some(cstr));
-}
-
-static value conv_call_value_opt(jobject v)
-{
-	CAMLparam0();
-	CAMLlocal1(jvalue);
-	if (IS_NULL(env, v)) CAMLreturn(Val_none);
-	jvalue = JVALUE_GET(env, v);
-	CAMLreturn(copy_some(jvalue));
-}
-
-#define P_INIT_DISABLED(n) DISABLED("Java.new_: Java.call_" n)
-
-#define CONV_UNIT(v)		Val_unit
-#define CONV_OBJ(v)			alloc_java_obj(env, v)
-CALL(unit, int /* dummy */, Void, CONV_UNIT, P_INIT_DISABLED("unit"),
-	DISABLED("Java.field: Java.call_unit"), 0;(void)res;(void))
-CALL(int, jint, Int, Val_long, P_INIT_DISABLED("int"), ENABLED,)
-CALL(float, jfloat, Float, caml_copy_double, P_INIT_DISABLED("float"), ENABLED,)
-CALL(double, jdouble, Double, caml_copy_double, P_INIT_DISABLED("double"), ENABLED,)
-CALL(string, jobject, Object, conv_call_string,
-	(jobject)(long)P_INIT_DISABLED("string"), ENABLED,)
-CALL(string_opt, jobject, Object, conv_call_string_opt,
-	(jobject)(long)P_INIT_DISABLED("string"), ENABLED,)
-CALL(bool, jboolean, Boolean, Val_bool, P_INIT_DISABLED("bool"), ENABLED,)
-CALL(char, jchar, Char, Val_long, P_INIT_DISABLED("char"), ENABLED,)
-CALL(int8, jbyte, Byte, Val_long, P_INIT_DISABLED("int8"), ENABLED,)
-CALL(int16, jshort, Short, Val_long, P_INIT_DISABLED("int16"), ENABLED,)
-CALL(int32, jint, Int, caml_copy_int32, P_INIT_DISABLED("int32"), ENABLED,)
-CALL(int64, jlong, Long, caml_copy_int64, P_INIT_DISABLED("int64"), ENABLED,)
-CALL(obj, jobject, Object, CONV_OBJ, ENABLED, ENABLED,)
-CALL(value, jobject, Object, conv_call_value,
-	(void*)(long)P_INIT_DISABLED("value"), ENABLED,)
-CALL(value_opt, jobject, Object, conv_call_value_opt,
-	(void*)(long)P_INIT_DISABLED("value"), ENABLED,)
-
-#undef CALL
-#undef ENABLED
-#undef DISABLED
-#undef DISABLED_
 
 /*
 ** ========================================================================== **
@@ -525,3 +268,335 @@ value ocaml_java__shutdown(value unit)
 }
 
 #endif
+
+/*
+** ========================================================================== **
+** ========================================================================== **
+** ========================================================================== **
+** ========================================================================== **
+** New API
+*/
+
+/*
+** ========================================================================== **
+** Some convertion functions
+*/
+
+static value conv_of_string(jstring str)
+{
+	if (IS_NULL(env, str)) caml_failwith("Java.call_string: Null string");
+	return jstring_to_cstring(env, str);
+}
+
+static value conv_of_value(jobject v)
+{
+	if (IS_NULL(env, v)) caml_failwith("Java.call_value: Null value");
+	return JVALUE_GET(env, v);
+}
+
+static value conv_of_string_opt(jstring str)
+{
+	CAMLparam0();
+	CAMLlocal1(cstr);
+	if (IS_NULL(env, str)) CAMLreturn(Val_none);
+	cstr = jstring_to_cstring(env, str);
+	CAMLreturn(copy_some(cstr));
+}
+
+static value conv_of_value_opt(jobject v)
+{
+	CAMLparam0();
+	CAMLlocal1(jvalue);
+	if (IS_NULL(env, v)) CAMLreturn(Val_none);
+	jvalue = JVALUE_GET(env, v);
+	CAMLreturn(copy_some(jvalue));
+}
+
+static jobject conv_to_string(value v)
+{
+	jstring const js = (*env)->NewStringUTF(env, String_val(v));
+
+	push_local_ref(js);
+	return js;
+}
+
+static jobject conv_to_string_opt(value opt)
+{
+	if (opt == Val_none)
+		return NULL;
+	return conv_to_string(Some_val(opt));
+}
+
+static jobject conv_to_value(value v)
+{
+	jobject const obj = JVALUE_NEW(env, v);
+
+	push_local_ref(obj);
+	return obj;
+}
+
+static jobject conv_to_value_opt(value opt)
+{
+	if (opt == Val_none)
+		return NULL;
+	return conv_to_value(Some_val(opt));
+}
+
+/*
+** ========================================================================== **
+** jtype
+** The `jtype` enum should correspond to the `'a jtype` variant
+*/
+
+enum jtype
+{
+	JTYPE_INT			= Val_long(0),
+	JTYPE_BOOL			= Val_long(1),
+	JTYPE_BYTE			= Val_long(2),
+	JTYPE_SHORT			= Val_long(3),
+	JTYPE_INT32			= Val_long(4),
+	JTYPE_LONG			= Val_long(5),
+	JTYPE_CHAR			= Val_long(6),
+	JTYPE_FLOAT			= Val_long(7),
+	JTYPE_DOUBLE		= Val_long(8),
+	JTYPE_STRING		= Val_long(9),
+	JTYPE_STRING_OPT	= Val_long(10),
+	JTYPE_OBJECT		= Val_long(11),
+	JTYPE_VALUE			= Val_long(12),
+	JTYPE_VALUE_OPT		= Val_long(13),
+};
+
+#define JTYPE_VOID_VAL	Val_long(0)
+#define JTYPE_VAL(v)	Field(v, 0)
+
+// Generates perform_call_* functions
+// `CONV_OF` is a function that convert a native type to OCaml's value
+#define GEN_CALL_(NAME, JNAME, RESULT, CONV_OF) \
+static value perform_call_##NAME(jobject obj, jmethodID meth) \
+{ \
+	arg_count = 0; \
+	RESULT (*env)->Call##JNAME##MethodA(env, obj, meth, arg_stack); \
+	clear_local_refs(); \
+	check_exceptions(); \
+	return CONV_OF; \
+} \
+static value perform_call_##NAME##_static(jclass cls, jmethodID meth) \
+{ \
+	arg_count = 0; \
+	RESULT (*env)->CallStatic##JNAME##MethodA(env, cls, meth, arg_stack); \
+	clear_local_refs(); \
+	check_exceptions(); \
+	return CONV_OF; \
+} \
+static value perform_call_##NAME##_nonvirtual(jobject obj, jclass cls, jmethodID meth) \
+{ \
+	arg_count = 0; \
+	RESULT (*env)->CallNonvirtual##JNAME##MethodA(env, obj, cls, meth, arg_stack); \
+	clear_local_refs(); \
+	check_exceptions(); \
+	return CONV_OF; \
+}
+
+#define GEN_CALL(NAME, JNAME, TYPE, CONV_OF) \
+	GEN_CALL_(NAME, JNAME, TYPE res =, CONV_OF(res))
+
+// Generates perform_read_* functions
+#define GEN_READ(NAME, JNAME, CONV_OF) \
+static value perform_read_##NAME(jobject obj, jfieldID field) \
+{ \
+	return CONV_OF((*env)->Get##JNAME##Field(env, obj, field)); \
+} \
+static value perform_read_##NAME##_static(jobject obj, jfieldID field) \
+{ \
+	return CONV_OF((*env)->GetStatic##JNAME##Field(env, obj, field)); \
+}
+
+// Generates perform_push_* functions
+// `CONV_TO` is a function that takes an OCaml value and generates a native type
+// `DST` is the jvalue's field
+#define GEN_PUSH(NAME, JNAME, DST, CONV_TO) \
+static void perform_push_##NAME(value v) \
+{ \
+	arg_stack[arg_count].DST = CONV_TO(v); \
+	arg_count++; \
+}
+
+// Generates perform_write_* functions
+#define GEN_WRITE(NAME, JNAME, DST, CONV_TO) \
+static void perform_write_##NAME(jobject obj, jfieldID field, value v) \
+{ \
+	(*env)->Set##JNAME##Field(env, obj, field, CONV_TO(v)); \
+} \
+static void perform_write_##NAME##_static(jclass cls, jfieldID field, value v) \
+{ \
+	(*env)->SetStatic##JNAME##Field(env, cls, field, CONV_TO(v)); \
+}
+
+#define GEN(NAME, JNAME, TYPE, CONV_OF, DST, CONV_TO) \
+	GEN_CALL(NAME, JNAME, TYPE, CONV_OF) \
+	GEN_READ(NAME, JNAME, CONV_OF) \
+	GEN_PUSH(NAME, JNAME, DST, CONV_TO) \
+	GEN_WRITE(NAME, JNAME, DST, CONV_TO)
+
+#define CONV_OF_OBJ(v)		alloc_java_obj(env, v)
+
+GEN_CALL_(void, Void,, Val_unit)
+GEN(int,		Int,		jint,		Val_long,			i,	Long_val)
+GEN(bool,		Boolean,	jboolean,	Val_bool,			z,	Long_val)
+GEN(byte,		Byte,		jbyte,		Val_long,			b,	Long_val)
+GEN(short,		Short,		jshort,		Val_long,			s,	Long_val)
+GEN(int32,		Int,		jint,		caml_copy_int32,	i,	Int32_val)
+GEN(long,		Long,		jlong,		caml_copy_int64,	j,	Int64_val)
+GEN(char,		Char,		jchar,		Val_long,			c,	Long_val)
+GEN(float,		Float,		jfloat,		caml_copy_double,	f,	Double_val)
+GEN(double,		Double,		jdouble,	caml_copy_double,	d,	Double_val)
+GEN(string,		Object,		jobject,	conv_of_string,		l,	conv_to_string)
+GEN(stringopt,	Object,		jobject,	conv_of_string_opt,	l,	conv_to_string_opt)
+GEN(object,		Object,		jobject,	CONV_OF_OBJ,		l,	Java_obj_val_opt)
+GEN(value,		Object,		jobject,	conv_of_value,		l,	conv_to_value)
+GEN(valueopt,	Object,		jobject,	conv_of_value_opt,	l,	conv_to_value_opt)
+
+#undef GEN
+
+/*
+** ========================================================================== **
+** API
+*/
+
+#define PERFORM_RAW(PREFIX, SUFFIX, JTYPE, ...) \
+	switch (JTYPE)															\
+	{																		\
+	case JTYPE_INT:			PREFIX##_int##SUFFIX(__VA_ARGS__); break;		\
+	case JTYPE_BOOL:		PREFIX##_bool##SUFFIX(__VA_ARGS__); break;		\
+	case JTYPE_BYTE:		PREFIX##_byte##SUFFIX(__VA_ARGS__); break;		\
+	case JTYPE_SHORT:		PREFIX##_short##SUFFIX(__VA_ARGS__); break;		\
+	case JTYPE_INT32:		PREFIX##_int32##SUFFIX(__VA_ARGS__); break;		\
+	case JTYPE_LONG:		PREFIX##_long##SUFFIX(__VA_ARGS__); break;		\
+	case JTYPE_CHAR:		PREFIX##_char##SUFFIX(__VA_ARGS__); break;		\
+	case JTYPE_FLOAT:		PREFIX##_float##SUFFIX(__VA_ARGS__); break;		\
+	case JTYPE_DOUBLE:		PREFIX##_double##SUFFIX(__VA_ARGS__); break;	\
+	case JTYPE_STRING:		PREFIX##_string##SUFFIX(__VA_ARGS__); break;	\
+	case JTYPE_STRING_OPT:	PREFIX##_stringopt##SUFFIX(__VA_ARGS__); break;	\
+	case JTYPE_OBJECT:		PREFIX##_object##SUFFIX(__VA_ARGS__); break;	\
+	case JTYPE_VALUE:		PREFIX##_value##SUFFIX(__VA_ARGS__); break;		\
+	case JTYPE_VALUE_OPT:	PREFIX##_valueopt##SUFFIX(__VA_ARGS__); break;	\
+	}
+
+#define PERFORM(NAME, SUFFIX, JTYPE, ...) \
+	PERFORM_RAW(return NAME, SUFFIX, JTYPE, __VA_ARGS__)
+
+#define PERFORM_CALL(SUFFIX, JTYPE, ...) \
+	if (JTYPE == JTYPE_VOID_VAL)										\
+		return perform_call_void##SUFFIX(__VA_ARGS__);					\
+	else 																\
+		PERFORM(perform_call, SUFFIX, JTYPE_VAL(JTYPE), __VA_ARGS__)
+
+value ocaml_java__push(value jtype, value v)
+{
+	PERFORM_RAW(perform_push,, jtype, v);
+	return Val_unit;
+}
+
+value ocaml_java__call(value obj, value meth, value jtype)
+{
+	jobject		jobj;
+	jmethodID	jmeth;
+
+	if (obj == Java_null_val)
+		caml_failwith("Java.call: null");
+	jobj = Java_obj_val(obj);
+	jmeth = (jmethodID)Nativeint_val(meth);
+	PERFORM_CALL(, jtype, jobj, jmeth);
+	return Val_unit; // unreachable
+}
+
+value ocaml_java__call_static(value cls, value meth, value jtype)
+{
+	jclass		jcls;
+	jmethodID	jmeth;
+
+	jcls = Java_obj_val(cls);
+	jmeth = (jmethodID)Nativeint_val(meth);
+	PERFORM_CALL(_static, jtype, jcls, jmeth);
+	return Val_unit; // unreachable
+}
+
+value ocaml_java__call_nonvirtual(value obj, value cls, value meth, value jtype)
+{
+	jobject		jobj;
+	jclass		jcls;
+	jmethodID	jmeth;
+
+	if (obj == Java_null_val)
+		caml_failwith("Java.call_nonvirtual: null");
+	jobj = Java_obj_val(obj);
+	jcls = Java_obj_val(cls);
+	jmeth = (jmethodID)Nativeint_val(meth);
+	PERFORM_CALL(_nonvirtual, jtype, jobj, jcls, jmeth);
+	return Val_unit; // unreachable
+}
+
+value ocaml_java__new(value cls, value meth)
+{
+	jclass		jcls;
+	jmethodID	jmeth;
+	jobject		obj;
+
+	jcls = Java_obj_val(cls);
+	jmeth = (jmethodID)Nativeint_val(meth);
+	obj = (*env)->NewObjectA(env, jcls, jmeth, arg_stack);
+	if (obj == NULL)
+	{
+		check_exceptions();
+		caml_failwith("Java.new_");
+	}
+	return alloc_java_obj(env, obj);
+}
+
+value ocaml_java__read_field(value obj, value field, value jtype)
+{
+	jobject		jobj;
+	jfieldID	jfield;
+
+	if (obj == Java_null_val)
+		caml_failwith("Java.read_field: null");
+	jobj = Java_obj_val(obj);
+	jfield = (jfieldID)Nativeint_val(field);
+	PERFORM(perform_read,, jtype, jobj, jfield);
+	return Val_unit; // unreachable
+}
+
+value ocaml_java__read_field_static(value cls, value field, value jtype)
+{
+	jclass		jcls;
+	jfieldID	jfield;
+
+	jcls = Java_obj_val(cls);
+	jfield = (jfieldID)Nativeint_val(field);
+	PERFORM(perform_read, _static, jtype, jcls, jfield);
+	return Val_unit; // unreachable
+}
+
+value ocaml_java__write_field(value obj, value field, value jtype, value v)
+{
+	jobject		jobj;
+	jfieldID	jfield;
+
+	if (obj == Java_null_val)
+		caml_failwith("Java.write_field: null");
+	jobj = Java_obj_val(obj);
+	jfield = (jfieldID)Nativeint_val(field);
+	PERFORM_RAW(perform_write,, jtype, jobj, jfield, v);
+	return Val_unit;
+}
+
+value ocaml_java__write_field_static(value cls, value field, value jtype, value v)
+{
+	jclass		jcls;
+	jfieldID	jfield;
+
+	jcls = Java_obj_val(cls);
+	jfield = (jfieldID)Nativeint_val(field);
+	PERFORM_RAW(perform_write, _static, jtype, jcls, jfield, v);
+	return Val_unit;
+}

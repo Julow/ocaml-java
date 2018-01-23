@@ -81,112 +81,67 @@ external sameobject : obj -> obj -> bool = "ocaml_java__sameobject"
 	Raises `Failure` if the object is `null` *)
 external objectclass : obj -> Class.t = "ocaml_java__objectclass"
 
-(** Calling a function
-	-
-	Begins the calling of a function with a call to one of:
-		- `meth obj meth`
-		- `meth_static class_ meth`
-		- `meth_nonvirtual obj class_ meth`
-		- `new_ class_ init`
-	-
-	Push arguments using the `arg_`* functions
-	-
-	| Function		| OCaml type	| Java type
-	| ---			| ---			| ---
-	| arg_int		| int			| int
-	| arg_float		| float			| float
-	| arg_double	| float			| double
-	| arg_string	| string		| String
-	| arg_bool		| bool			| boolean
-	| arg_char		| char			| char
-	| arg_byte		| int			| byte
-	| arg_short		| int			| short
-	| arg_int32		| int32			| int
-	| arg_int64		| int64			| long
-	| arg_obj		| Java.obj		| Object
-	| arg_value		| 'a			| juloo.javacaml.Value
-	-
-	Call the function and get the result with the `call_`* functions *)
+(** The representation of an argument/field *)
+type _ jtype =
+	| Int : int jtype
+	| Bool : bool jtype
+	| Byte : int jtype
+	| Short : int jtype
+	| Int32 : int32 jtype
+	| Long : int64 jtype
+	| Char : char jtype
+	| Float : float jtype
+	| Double : float jtype
+	| String : string jtype
+	| String_opt : string option jtype
+	| Object : obj jtype
+	| Value : 'a jtype
+	| Value_opt : 'a option jtype
 
-(** Begins the calling of a method
-	Raises `Invalid_argument` if `object` is null *)
-external meth : obj -> meth -> unit = "ocaml_java__calling_meth"
+(** Specify the return type *)
+type _ jtype' =
+	| Void : unit jtype'
+	| Ret : 'a jtype -> 'a jtype'
 
-(** Same as `meth` for static methods *)
-external meth_static : Class.t -> meth_static -> unit
-	= "ocaml_java__calling_meth_static" [@@noalloc]
+(** Adds an argument on the calling stack *)
+external push : 'a jtype -> 'a -> unit
+	= "ocaml_java__push" [@@noalloc]
 
-(** Same as `meth` for non-virtual call
+(** Perform a call
+	Assume enough argument are in the calling stack (see `push`)
+	Raises `Failure` if the object is null
+	May crash if some argument are missing or have the wrong representation *)
+external call : obj -> meth -> 'a jtype' -> 'a
+	= "ocaml_java__call"
+
+(** Same as `call`, for static methods *)
+external call_static : Class.t -> meth_static -> 'a jtype' -> 'a
+	= "ocaml_java__call_static"
+
+(** Same as `call`, for non-virtual call
 	Call the method of a specific class instead of the class of the object *)
-external meth_nonvirtual : obj -> Class.t -> meth -> unit
-	= "ocaml_java__calling_meth_nonvirtual"
+external call_nonvirtual : obj -> Class.t -> meth -> 'a jtype' -> 'a
+	= "ocaml_java__call_nonvirtual"
 
-(** Begin the calling of an object constructor
-	Must be called with `call_obj` to retrieve the object *)
-external new_ : Class.t -> meth_constructor -> unit
-	= "ocaml_java__calling_init" [@@noalloc]
+(** Instantiate a new object
+	Assume enough argument are in the calling stack (see `push`)
+	May crash for the same reason as `call` *)
+external new_ : Class.t -> meth_constructor -> obj
+	= "ocaml_java__new"
 
-(** Accessing a field
-	-
-	Begins the accessing of a field with a call to one of:
-		- `field obj field`
-		- `field_static class_ field`
-	-
-	Get the value with the `call_`* functions *)
+(** Read the value of a field
+	May crash if the representation is incorrect *)
+external read_field : obj -> field -> 'a jtype -> 'a
+	= "ocaml_java__read_field"
 
-(** Begin the accessing of a field
-	Raises `Invalid_argument` if `object` is null *)
-external field : obj -> field -> unit = "ocaml_java__calling_field"
+(** Same as `read_field`, for static fields *)
+external read_field_static : Class.t -> field_static -> 'a jtype -> 'a
+	= "ocaml_java__read_field_static"
 
-(** Same as `field`, for static field *)
-external field_static : Class.t -> field_static -> unit
-	= "ocaml_java__calling_field_static" [@@noalloc]
+(** Write to a field *)
+external write_field : obj -> field -> 'a jtype -> 'a -> unit
+	= "ocaml_java__write_field" [@@noalloc]
 
-(** Adds an argument on the stack *)
-external arg_int : int -> unit = "ocaml_java__arg_int" [@@noalloc]
-external arg_float : (float [@unboxed]) -> unit
-	= "ocaml_java__arg_float" "ocaml_java__arg_float_unboxed"
-	[@@noalloc]
-external arg_double : (float [@unboxed]) -> unit
-	= "ocaml_java__arg_double" "ocaml_java__arg_double_unboxed"
-	[@@noalloc]
-external arg_string : string -> unit = "ocaml_java__arg_string" [@@noalloc]
-external arg_bool : bool -> unit = "ocaml_java__arg_bool" [@@noalloc]
-external arg_char : char -> unit = "ocaml_java__arg_char" [@@noalloc]
-external arg_int8 : int -> unit = "ocaml_java__arg_int8" [@@noalloc]
-external arg_int16 : int -> unit = "ocaml_java__arg_int16" [@@noalloc]
-external arg_int32 : (int32 [@unboxed]) -> unit
-	= "ocaml_java__arg_int32" "ocaml_java__arg_int32_unboxed"
-	[@@noalloc]
-external arg_int64 : (int64 [@unboxed]) -> unit
-	= "ocaml_java__arg_int64" "ocaml_java__arg_int64_unboxed"
-	[@@noalloc]
-external arg_obj : obj -> unit = "ocaml_java__arg_obj" [@@noalloc]
-external arg_value : 'a -> unit = "ocaml_java__arg_value"
-
-(** Calls the function and returns the result
-	Same convertion as for the `arg_` functions *)
-external call_unit : unit -> unit = "ocaml_java__call_unit"
-external call_int : unit -> int = "ocaml_java__call_int"
-external call_float : unit -> float = "ocaml_java__call_float"
-external call_double : unit -> float = "ocaml_java__call_double"
-
-(** Raises `Failure` if the method returns `null` *)
-external call_string : unit -> string = "ocaml_java__call_string"
-
-(** Same as `call_string` but returns `None` instead of failing on `null` *)
-external call_string_opt : unit -> string option = "ocaml_java__call_string_opt"
-
-external call_bool : unit -> bool = "ocaml_java__call_bool"
-external call_char : unit -> char = "ocaml_java__call_char"
-external call_int8 : unit -> int = "ocaml_java__call_int8"
-external call_int16 : unit -> int = "ocaml_java__call_int16"
-external call_int32 : unit -> int32 = "ocaml_java__call_int32"
-external call_int64 : unit -> int64 = "ocaml_java__call_int64"
-external call_obj : unit -> obj = "ocaml_java__call_obj"
-
-(** Raises `Failure` if the method returns `null` *)
-external call_value : unit -> 'a = "ocaml_java__call_value"
-
-(** Same as `call_value` but returns `None` instead of failing on `null` *)
-external call_value_opt : unit -> 'a option = "ocaml_java__call_value_opt"
+(** Same as `write_field`, for static fields *)
+external write_field_static : Class.t -> field_static -> 'a jtype -> 'a -> unit
+	= "ocaml_java__write_field_static" [@@noalloc]
