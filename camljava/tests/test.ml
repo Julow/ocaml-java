@@ -12,10 +12,10 @@ struct
 		lazy (Class.get_meth (Lazy.force cls) "printStackTrace" "()V")
 
 	let get_message t =
-		call t (Lazy.force m_getMessage) (Ret String)
+		call_string t (Lazy.force m_getMessage)
 
 	let print_stack_trace t =
-		call t (Lazy.force m_printStackTrace) Void
+		call_void t (Lazy.force m_printStackTrace)
 
 end
 
@@ -35,82 +35,82 @@ let test () =
 
 	let open Java in
 
-	push Int 1;
-	assert (call_static cls method_static_test (Ret Int) = ~-41);
+	push_int 1;
+	assert (call_static_int cls method_static_test = ~-41);
 
 	let obj = new_ cls method_init in
 
-	push Int 1;
-	push Int 4;
-	assert (call obj method_test (Ret Int) = 5);
+	push_int 1;
+	push_int 4;
+	assert (call_int obj method_test = 5);
 
-	assert (read_field obj field_a Int = 42);
-	assert (read_field obj field_b String = "abc");
-	assert (read_field_static cls method_static_field_a Int = 42);
+	assert (read_field_int obj field_a = 42);
+	assert (read_field_string obj field_b = "abc");
+	assert (read_field_static_int cls method_static_field_a = 42);
 
-	push Int 1;
-	push String "2";
+	push_int 1;
+	push_string "2";
 	let obj = new_ cls method_init_ab in
 
-	let test tname sigt jtype expected =
+	let test tname sigt push call expected =
 		let get_m = Class.get_meth cls ("test_get_" ^ tname) ("()" ^ sigt)
 		and id_m = Class.get_meth cls "test_id" ("(" ^ sigt ^ ")" ^ sigt) in
-		let v = call obj get_m (Ret jtype) in
+		let v = call obj get_m in
 		(if v <> expected then
 			failwith ("test_get failure: " ^ tname));
-		push jtype v;
-		let v' = call obj id_m (Ret jtype) in
+		push v;
+		let v' = call obj id_m in
 		(if v <> v' then
 			failwith ("test_id failure: " ^ tname))
 	in
-	test "int" "I" Int 1;
-	test "float" "F" Float 2.0;
-	test "double" "D" Double 3.0;
-	test "string" "Ljava/lang/String;" String "4";
-	test "string" "Ljava/lang/String;" String_opt (Some "4");
-	test "boolean" "Z" Bool true;
-	test "char" "C" Char '5';
-	test "byte" "B" Byte 6;
-	test "short" "S" Short 7;
-	test "int32" "I" Int32 (Int32.of_int 8);
-	test "int64" "J" Long (Int64.of_int 9);
+	test "int" "I" push_int call_int 1;
+	test "float" "F" push_float call_float 2.0;
+	test "double" "D" push_double call_double 3.0;
+	test "string" "Ljava/lang/String;" push_string call_string "4";
+	test "string" "Ljava/lang/String;" push_string_opt call_string_opt (Some "4");
+	test "boolean" "Z" push_bool call_bool true;
+	test "char" "C" push_char call_char '5';
+	test "byte" "B" push_byte call_byte 6;
+	test "short" "S" push_short call_short 7;
+	test "int32" "I" push_int32 call_int32 (Int32.of_int 8);
+	test "int64" "J" push_long call_long (Int64.of_int 9);
 	Callback.register "get_int_pair" (fun () -> (1, 2));
-	test "value" "Ljuloo/javacaml/Value;" Value (1, 2);
-	test "value" "Ljuloo/javacaml/Value;" Value_opt (Some (1, 2));
+	test "value" "Ljuloo/javacaml/Value;" push_value call_value (1, 2);
+	test "value" "Ljuloo/javacaml/Value;" push_value_opt call_value_opt (Some (1, 2));
 
 	let id_obj_m = Class.get_meth cls "test_id" "(Ljava/lang/Object;)Ljava/lang/Object;" in
 
-	let test_id jtype v =
-		push jtype v;
-		assert (call obj id_obj_m (Ret jtype) = v)
+	let test_id push call v =
+		push v;
+		assert (call obj id_obj_m = v)
 	in
 
-	test_id String "abcdef";
-	test_id Value "abcdef";
-	test_id Object null;
+	test_id push_string call_string "abcdef";
+	test_id push_value call_value "abcdef";
+	test_id push_object call_object null;
 
 	begin try
-		push Object null;
-		ignore (call obj id_obj_m (Ret Value));
+		push_object null;
+		ignore (call_value obj id_obj_m);
 		assert false
 	with Failure _ -> ()
 	end;
 
 	begin try
-		push Object null;
-		ignore (call obj id_obj_m (Ret String));
+		push_object null;
+		ignore (call_string obj id_obj_m);
 		assert false
 	with Failure _ -> ()
 	end;
 
-	push Object null;
-	assert (call obj id_obj_m (Ret String_opt) = None);
+	push_object null;
+	assert (call_string_opt obj id_obj_m = None);
 
-	push Object null;
-	assert (call obj id_obj_m (Ret Value_opt) = None);
+	push_object null;
+	assert (call_value_opt obj id_obj_m = None);
 
 	begin try
-		call obj (get_meth cls "raise" "()V") Void;
+		call_void obj (get_meth cls "raise" "()V");
 		assert false
 	with Java.Exception ex ->
 		assert (Throwable.get_message ex = "test")
@@ -131,8 +131,8 @@ let test () =
 		let s = s ^ "a" in
 		if String.length s >= 64 then s
 		else begin
-			push String s;
-			call_static cls m_rec_b (Ret String)
+			push_string s;
+			call_static_string cls m_rec_b
 		end
 	in
 	Callback.register "test_rec_a" test_rec_a;
@@ -146,7 +146,7 @@ let () = Callback.register "camljava_do_test" test
 let test_javacaml () =
 	let cls = Java.Class.find_class "javacaml/test/Test" in
 	let m_do_test = Java.Class.get_meth_static cls "do_test" "()V" in
-	Java.call_static cls m_do_test Java.Void
+	Java.call_static_void cls m_do_test
 
 let () =
 	let jar_files = [
