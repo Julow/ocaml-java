@@ -8,6 +8,10 @@ type obj
 (** The null value *)
 val null : obj
 
+(** Java array
+	See the `Jarray` module *)
+type 'a jarray
+
 (** Methods and fields
 	There is a type for each type of method/field
 	meth				Member method
@@ -122,6 +126,7 @@ external push_object : obj -> unit = "ocaml_java__push_object" [@@noalloc]
 external push_value : 'a -> unit = "ocaml_java__push_value" [@@noalloc]
 external push_value_opt : 'a option -> unit
 	= "ocaml_java__push_value_opt" [@@noalloc]
+external push_array : 'a jarray -> unit = "ocaml_java__push_array" [@@noalloc]
 
 (** Perform a call
 	Assume enough argument are in the calling stack (see `push`)
@@ -145,6 +150,7 @@ val call_object : obj -> meth -> obj
 (** Raises `Failure` if the result is null *)
 val call_value : obj -> meth -> 'a
 val call_value_opt : obj -> meth -> 'a option
+val call_array : obj -> meth -> 'a jarray
 
 (** Same as `call`, for static methods *)
 val call_static_void : Class.t -> meth_static -> unit
@@ -162,6 +168,7 @@ val call_static_string_opt : Class.t -> meth_static -> string option
 val call_static_object : Class.t -> meth_static -> obj
 val call_static_value : Class.t -> meth_static -> 'a
 val call_static_value_opt : Class.t -> meth_static -> 'a option
+val call_static_array : Class.t -> meth_static -> 'a jarray
 
 (** Same as `call`, for non-virtual call
 	Call the method of a specific class instead of the class of the object *)
@@ -180,6 +187,7 @@ val call_nonvirtual_string_opt : Class.t -> obj -> meth -> string option
 val call_nonvirtual_object : Class.t -> obj -> meth -> obj
 val call_nonvirtual_value : Class.t -> obj -> meth -> 'a
 val call_nonvirtual_value_opt : Class.t -> obj -> meth -> 'a option
+val call_nonvirtual_array : Class.t -> obj -> meth -> 'a jarray
 
 (** Read the value of a field
 	May crash if the representation is incorrect *)
@@ -199,6 +207,7 @@ val read_field_object : obj -> field -> obj
 (** Raises `Failure` if the value is `null` *)
 val read_field_value : obj -> field -> 'a
 val read_field_value_opt : obj -> field -> 'a option
+val read_field_array : obj -> field -> 'a jarray
 
 (** Same as `read_field`, for static fields *)
 val read_field_static_int : Class.t -> field_static -> int
@@ -217,6 +226,7 @@ val read_field_static_object : Class.t -> field_static -> obj
 (** Raises `Failure` if the value is `null` *)
 val read_field_static_value : Class.t -> field_static -> 'a
 val read_field_static_value_opt : Class.t -> field_static -> 'a option
+val read_field_static_array : Class.t -> field_static -> 'a jarray
 
 (** Write to a field *)
 val write_field_int : obj -> field -> int -> unit
@@ -233,6 +243,7 @@ val write_field_string_opt : obj -> field -> string option -> unit
 val write_field_object : obj -> field -> obj -> unit
 val write_field_value : obj -> field -> 'a -> unit
 val write_field_value_opt : obj -> field -> 'a option -> unit
+val write_field_array : obj -> field -> 'a jarray -> unit
 
 (** Same as `write_field`, for static fields *)
 val write_field_static_int : Class.t -> field_static -> int -> unit
@@ -249,3 +260,4 @@ val write_field_static_string_opt : Class.t -> field_static -> string option -> 
 val write_field_static_object : Class.t -> field_static -> obj -> unit
 val write_field_static_value : Class.t -> field_static -> 'a -> unit
 val write_field_static_value_opt : Class.t -> field_static -> 'a option -> unit
+val write_field_static_array : Class.t -> field_static -> 'a jarray -> unit

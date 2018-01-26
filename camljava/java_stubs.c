@@ -276,14 +276,20 @@ static void push_local_ref(jobject obj)
 
 static value conv_of_string(jstring str)
 {
-	if (IS_NULL(env, str)) caml_failwith("Java.call_string: Null string");
+	if (IS_NULL(env, str)) caml_failwith("Null string");
 	return jstring_to_cstring(env, str);
 }
 
 static value conv_of_value(jobject v)
 {
-	if (IS_NULL(env, v)) caml_failwith("Java.call_value: Null value");
+	if (IS_NULL(env, v)) caml_failwith("Null value");
 	return JVALUE_GET(env, v);
+}
+
+static value conv_of_array(jarray a)
+{
+	if (IS_NULL(env, a)) caml_failwith("Null array");
+	return alloc_java_obj(env, a);
 }
 
 static value conv_of_string_opt(jstring str)
@@ -363,7 +369,8 @@ static jobject conv_to_value_opt(value opt)
 	GEN(string_opt,	Object,		jobject,	conv_of_string_opt,	l,	conv_to_string_opt) \
 	GEN(object,		Object,		jobject,	CONV_OF_OBJ,		l,	Java_obj_val_opt) \
 	GEN(value,		Object,		jobject,	conv_of_value,		l,	conv_to_value) \
-	GEN(value_opt,	Object,		jobject,	conv_of_value_opt,	l,	conv_to_value_opt)
+	GEN(value_opt,	Object,		jobject,	conv_of_value_opt,	l,	conv_to_value_opt) \
+	GEN(array,		Object,		jarray,		conv_of_array,		l,	Java_obj_val)
 
 // `GEN_PRIM` and `GEN_OBJ`
 #define GEN(GEN) \
@@ -373,7 +380,6 @@ static jobject conv_to_value_opt(value opt)
 /*
 ** ========================================================================== **
 ** Call API
-** Generates 
 */
 
 value ocaml_java__new(value cls, value meth)
@@ -514,3 +520,86 @@ GEN_PUSH_UNBOXED(double, double, d)
 #undef GEN_READ
 #undef GEN_PUSH
 #undef GEN_WRITE
+
+/*
+** ========================================================================== **
+** Jarray API
+*/
+
+static value new_object_array(jclass cls, jobject obj, jint length)
+{
+	return alloc_java_obj(env,
+			(*env)->NewObjectArray(env, length, cls, obj));
+}
+
+#define GEN_JARRAY_CREATE_PRIM(NAME, JNAME, ...) \
+value ocaml_java__jarray_create_##NAME(value length)		\
+{															\
+	return alloc_java_obj(env,								\
+		(*env)->New##JNAME##Array(env, Long_val(length)));	\
+}
+
+GEN_PRIM(GEN_JARRAY_CREATE_PRIM)
+
+value ocaml_java__jarray_create_object(value cls, value obj, value length)
+{
+	return new_object_array(Java_obj_val(cls),
+			Java_obj_val_opt(obj),
+			Long_val(length));
+}
+
+value ocaml_java__jarray_create_string(value length)
+{
+	jclass const string_cls = (*env)->FindClass(env, "java/lang/String");
+	return new_object_array(string_cls, NULL, Long_val(length));
+}
+
+value ocaml_java__jarray_create_value(value length)
+{
+	jclass const string_cls = (*env)->FindClass(env, "juloo/javacaml/Value");
+	return new_object_array(string_cls, NULL, Long_val(length));
+}
+
+value ocaml_java__jarray_length(value array)
+{
+	return Val_long((*env)->GetArrayLength(env, Java_obj_val(array)));
+}
+
+#define GEN_JARRAY_SET_PRIM(NAME, JNAME, TYPE, CONV_OF, DST, CONV_TO) \
+value ocaml_java__jarray_set_##NAME(value array, value index, value v)		\
+{																			\
+	TYPE const buf = CONV_TO(v);											\
+	(*env)->Set##JNAME##ArrayRegion(env, Java_obj_val(array),				\
+			Long_val(index), 1, &buf);										\
+	return Val_unit;														\
+}
+
+#define GEN_JARRAY_SET_OBJ(NAME, JNAME, TYPE, CONV_OF, DST, CONV_TO) \
+value ocaml_java__jarray_set_##NAME(value array, value index, value v)		\
+{																			\
+	(*env)->SetObjectArrayElement(env, Java_obj_val(array),					\
+			Long_val(index), CONV_TO(v));									\
+	return Val_unit;														\
+}
+
+#define GEN_JARRAY_GET_PRIM(NAME, JNAME, TYPE, CONV_OF, ...) \
+value ocaml_java__jarray_get_##NAME(value array, value index)				\
+{																			\
+	TYPE buf;																\
+	(*env)->Get##JNAME##ArrayRegion(env, Java_obj_val(array),				\
+			Long_val(index), 1, &buf);										\
+	return CONV_OF(buf);													\
+}
+
+#define GEN_JARRAY_GET_OBJ(NAME, JNAME, TYPE, CONV_OF, ...) \
+value ocaml_java__jarray_get_##NAME(value array, value index)				\
+{																			\
+	return CONV_OF((*env)->GetObjectArrayElement(env,						\
+			Java_obj_val(array),											\
+			Long_val(index)));												\
+}
+
+GEN_PRIM(GEN_JARRAY_SET_PRIM)
+GEN_OBJ(GEN_JARRAY_SET_OBJ)
+GEN_PRIM(GEN_JARRAY_GET_PRIM)
+GEN_OBJ(GEN_JARRAY_GET_OBJ)

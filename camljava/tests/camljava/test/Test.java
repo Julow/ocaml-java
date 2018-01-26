@@ -114,6 +114,32 @@ public class Test
 	public static Object	test_static_object = new Object();
 	public static Value		test_static_value;
 
+	public static void		set_test_array_int(int[] v) { test_array_int = v; }
+	public static void		set_test_array_float(float[] v) { test_array_float = v; }
+	public static void		set_test_array_double(double[] v) { test_array_double = v; }
+	public static void		set_test_array_string(String[] v) { test_array_string = v; }
+	public static void		set_test_array_boolean(boolean[] v) { test_array_boolean = v; }
+	public static void		set_test_array_char(char[] v) { test_array_char = v; }
+	public static void		set_test_array_byte(byte[] v) { test_array_byte = v; }
+	public static void		set_test_array_short(short[] v) { test_array_short = v; }
+	public static void		set_test_array_int32(int[] v) { test_array_int32 = v; }
+	public static void		set_test_array_int64(long[] v) { test_array_int64 = v; }
+	public static void		set_test_array_object(Object[] v) { test_array_object = v; }
+	public static void		set_test_array_value(Value[] v) { test_array_value = v; }
+
+	public static int[]		test_array_int;
+	public static float[]	test_array_float;
+	public static double[]	test_array_double;
+	public static String[]	test_array_string;
+	public static boolean[]	test_array_boolean;
+	public static char[]	test_array_char;
+	public static byte[]	test_array_byte;
+	public static short[]	test_array_short;
+	public static int[]		test_array_int32;
+	public static long[]	test_array_int64;
+	public static Object[]	test_array_object;
+	public static Value[]	test_array_value;
+
 	public static final int		test_const_int = 1;
 	public static final float	test_const_float = 2.0f;
 	public static final double	test_const_double = 3.0;

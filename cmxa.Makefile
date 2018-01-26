@@ -20,13 +20,17 @@ OCAMLOPTFLAGS = -I $(B) -I $(T)
 
 # -
 
-CMX_FILES = $(B)/java.cmx
+CMX_FILES = $(B)/java.cmx $(B)/jarray.cmx
 
-$(B)/java.o $(B)/java.cmx: camljava/java.ml $(T)/java.cmi | $(B)
+$(B)/java.o $(B)/java.cmx: camljava/java.ml $(T)/java.cmi $(T)/jarray.cmi | $(B)
 $(T)/java.cmi: camljava/java.mli | $(T)
+
+$(B)/jarray.o $(B)/jarray.cmx: camljava/jarray.ml $(T)/jarray.cmi | $(B)
+$(T)/jarray.cmi: camljava/jarray.mli | $(T)
 
 clean::
 	rm -f $(B)/java.o $(B)/java.cmx $(T)/java.cmi
+	rm -f $(B)/jarray.o $(B)/jarray.cmx $(T)/jarray.cmi
 
 OBJ_FILES = $(B)/java_stubs.o $(B)/caml.o
 

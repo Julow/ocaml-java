@@ -2,6 +2,8 @@ type obj
 
 let null : obj = (Obj.magic 0)
 
+type 'a jarray
+
 type meth
 type meth_static
 type meth_constructor
@@ -72,6 +74,8 @@ external push_object : obj -> unit = "ocaml_java__push_object" [@@noalloc]
 external push_value : 'a -> unit = "ocaml_java__push_value" [@@noalloc]
 external push_value_opt : 'a option -> unit
 	= "ocaml_java__push_value_opt" [@@noalloc]
+external push_array : 'a jarray -> unit
+	= "ocaml_java__push_array" [@@noalloc]
 
 external call_void : obj -> meth -> unit = "ocaml_java__call_void"
 external call_int : obj -> meth -> int = "ocaml_java__call_int"
@@ -90,6 +94,8 @@ external call_object : obj -> meth -> obj = "ocaml_java__call_object"
 external call_value : obj -> meth -> 'a = "ocaml_java__call_value"
 external call_value_opt : obj -> meth -> 'a option
 	= "ocaml_java__call_value_opt"
+external call_array : obj -> meth -> 'a jarray
+	= "ocaml_java__call_array"
 
 external call_static_void : Class.t -> meth_static -> unit
 	= "ocaml_java__call_static_void"
@@ -121,6 +127,8 @@ external call_static_value : Class.t -> meth_static -> 'a
 	= "ocaml_java__call_static_value"
 external call_static_value_opt : Class.t -> meth_static -> 'a option
 	= "ocaml_java__call_static_value_opt"
+external call_static_array : Class.t -> meth_static -> 'a jarray
+	= "ocaml_java__call_static_array"
 
 external call_nonvirtual_void : Class.t -> obj -> meth -> unit
 	= "ocaml_java__call_nonvirtual_void"
@@ -152,6 +160,8 @@ external call_nonvirtual_value : Class.t -> obj -> meth -> 'a
 	= "ocaml_java__call_nonvirtual_value"
 external call_nonvirtual_value_opt : Class.t -> obj -> meth -> 'a option
 	= "ocaml_java__call_nonvirtual_value_opt"
+external call_nonvirtual_array : Class.t -> obj -> meth -> 'a jarray
+	= "ocaml_java__call_nonvirtual_array"
 
 external read_field_int : obj -> field -> int
 	= "ocaml_java__read_field_int"
@@ -181,6 +191,8 @@ external read_field_value : obj -> field -> 'a
 	= "ocaml_java__read_field_value"
 external read_field_value_opt : obj -> field -> 'a option
 	= "ocaml_java__read_field_value_opt"
+external read_field_array : obj -> field -> 'a jarray
+	= "ocaml_java__read_field_array"
 
 external read_field_static_int : Class.t -> field_static -> int
 	= "ocaml_java__read_field_static_int" [@@noalloc]
@@ -210,6 +222,8 @@ external read_field_static_value : Class.t -> field_static -> 'a
 	= "ocaml_java__read_field_static_value"
 external read_field_static_value_opt : Class.t -> field_static -> 'a option
 	= "ocaml_java__read_field_static_value_opt"
+external read_field_static_array : Class.t -> field_static -> 'a jarray
+	= "ocaml_java__read_field_static_array"
 
 external write_field_int : obj -> field -> int -> unit
 	= "ocaml_java__write_field_int"
@@ -239,6 +253,8 @@ external write_field_value : obj -> field -> 'a -> unit
 	= "ocaml_java__write_field_value"
 external write_field_value_opt : obj -> field -> 'a option -> unit
 	= "ocaml_java__write_field_value_opt"
+external write_field_array : obj -> field -> 'a jarray -> unit
+	= "ocaml_java__write_field_array"
 
 external write_field_static_int : Class.t -> field_static -> int -> unit
 	= "ocaml_java__write_field_static_int" [@@noalloc]
@@ -268,3 +284,5 @@ external write_field_static_value : Class.t -> field_static -> 'a -> unit
 	= "ocaml_java__write_field_static_value" [@@noalloc]
 external write_field_static_value_opt : Class.t -> field_static -> 'a option -> unit
 	= "ocaml_java__write_field_static_value_opt" [@@noalloc]
+external write_field_static_array : Class.t -> field_static -> 'a jarray -> unit
+	= "ocaml_java__write_field_static_array" [@@noalloc]
