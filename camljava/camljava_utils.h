@@ -49,7 +49,7 @@ static inline value alloc_java_obj(JNIEnv *env, jobject object)
 {
 	value v;
 
-	if (object == NULL)
+	if ((*env)->IsSameObject(env, object, NULL))
 		return Java_null_val;
 	v = caml_alloc_custom(&ocamljava__java_obj_custom_ops, sizeof(jobject), 0, 1);
 	object = (*env)->NewGlobalRef(env, object);
