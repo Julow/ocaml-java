@@ -24,6 +24,9 @@ static inline value copy_some(value v)
 // defined only if built with -DTARGET_JAVACAML
 void ocaml_java__camljava_init(JNIEnv *_env);
 
+// Returns the JNIEnv used by camljava
+JNIEnv *ocaml_java__camljava_env(void);
+
 /*
 ** ========================================================================== **
 ** OCaml value that represent a `jobject` pointer or the `null` value

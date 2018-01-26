@@ -6,6 +6,7 @@ import juloo.javacaml.Value;
 import juloo.javacaml.CallbackNotFoundException;
 import juloo.javacaml.CamlException;
 import juloo.javacaml.InvalidMethodIdException;
+import juloo.javacaml.ThreadException;
 
 public class Test
 {
@@ -143,6 +144,22 @@ public class Test
 		Caml.function(plusOne);
 		Caml.argInt(1);
 		assert Caml.callInt() == 2;
+
+// ThreadException
+		new Thread(new Runnable(){
+			public void run()
+			{
+				Caml.function(Caml.getCallback("test_int"));
+				Caml.argInt(1);
+				Caml.argInt(2);
+				try
+				{
+					Caml.callInt();
+					assert false;
+				}
+				catch (ThreadException e) {}
+			}
+		}).start();
 
 		System.out.println("Javacaml Ok");
 	}

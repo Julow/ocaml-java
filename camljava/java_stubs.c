@@ -173,6 +173,11 @@ value ocaml_java__class_get_field_static(value class_, value name, value sig)
 ** Init
 */
 
+JNIEnv *ocaml_java__camljava_env(void)
+{
+	return env;
+}
+
 #ifdef TARGET_JAVACAML
 
 void ocaml_java__camljava_init(JNIEnv *_env)

@@ -16,7 +16,8 @@ static jclass
 	Value,
 	CamlException,
 	InvalidMethodIdException,
-	ArgumentStackOverflowException;
+	ArgumentStackOverflowException,
+	ThreadException;
 
 static jmethodID
 	Callback_init,
@@ -201,6 +202,13 @@ TYPE Java_juloo_javacaml_Caml_call##NAME(JNIEnv *env, jclass c) \
 { \
 	value result; \
 \
+	if (ocaml_java__camljava_env() != env) \
+	{ \
+		(*env)->ThrowNew(env, ThreadException, \
+			"Calling OCaml code with a thread other than the main thread"); \
+		return DUMMY; \
+	} \
+\
 	result = caml_callbackN_exn( \
 		Field(stack, 0), stack_size - 1, &Field(stack, 1)); \
 \
@@ -304,6 +312,7 @@ static int init_classes(JNIEnv *env)
 	C("juloo/javacaml/", CamlException);
 	C("juloo/javacaml/", InvalidMethodIdException);
 	C("juloo/javacaml/", ArgumentStackOverflowException);
+	C("juloo/javacaml/", ThreadException);
 
 #undef C
 #undef I

@@ -1,41 +1,37 @@
 # -
 
-JAVACAML_DIR = ..
-CAMLJAVA_DIR = ../../camljava
+OCAMLJAVA_DIR = ../..
 
-JAVACAML_JAR = $(JAVACAML_DIR)/bin/javacaml.jar
-JAVACAML_A = $(JAVACAML_DIR)/bin/libjavacaml.a
+OCAMLJAVA_JAR = $(OCAMLJAVA_DIR)/bin/ocaml-java.jar
+JAVACAML_A = $(OCAMLJAVA_DIR)/bin/libjavacaml.a
 
 CAMLJAVA_TESTS_DIR = ../../camljava/tests
 
 run: all
-	CP=test.jar:$(JAVACAML_JAR):$(CAMLJAVA_TESTS_DIR)/test.jar; \
+	CP=test.jar:$(OCAMLJAVA_JAR):$(CAMLJAVA_TESTS_DIR)/test.jar; \
 	LD_LIBRARY_PATH=. java -ea -cp "$$CP" javacaml.test.Test
 
 all: | libs
 	make libtest.so test.jar
 
-libtest.so: \
-	$(CAMLJAVA_DIR)/java.mli $(CAMLJAVA_DIR)/java.ml \
-	$(wildcard *.ml *.c) \
-	$(CAMLJAVA_TESTS_DIR)/test.ml
+libtest.so: $(wildcard *.ml *.c) $(CAMLJAVA_TESTS_DIR)/test.ml
 	ocamlfind ocamlopt -linkpkg -output-obj \
 		-runtime-variant _pic \
 		-ccopt "-shared" \
-		-cclib "-Wl,--whole-archive $(JAVACAML_A) -Wl,--no-whole-archive" \
-		-I $(CAMLJAVA_DIR) \
+		-I $(OCAMLJAVA_DIR)/bin javacaml.cmxa \
+		unix.cmxa -g \
 		$^ -o $@
 
 test.jar: $(wildcard javacaml/test/*.java)
-	javac -cp $(JAVACAML_JAR) $^
+	javac -cp $(OCAMLJAVA_JAR) $^
 	jar cf $@ javacaml/test/*.class
 
 libs:
-	make -C $(JAVACAML_DIR)
+	make -C $(OCAMLJAVA_DIR)
 
 clean:
 	rm -f $(wildcard *.o *.cmo *.cmi *.cmx *.so *.jar javacaml/test/*.class)
-	make -C $(JAVACAML_DIR) clean
+	make -C $(OCAMLJAVA_DIR) clean
 
 re: clean
 	make run
