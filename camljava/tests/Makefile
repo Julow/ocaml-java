@@ -6,6 +6,7 @@ JAVACAML_TESTS_DIR = ../../javacaml/tests
 
 run: all
 	LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):$(JAVA_HOME)/jre/lib/amd64/server \
+	OCAMLRUNPARAM=b \
 	./a.out
 
 all: | libs
@@ -14,6 +15,8 @@ all: | libs
 a.out: $(JAVACAML_TESTS_DIR)/javacaml_test.ml $(wildcard *.ml)
 	ocamlopt \
 		-I $(OCAMLJAVA_DIR)/bin camljava.cmxa \
+		unix.cmxa \
+		-g \
 		$^ -o $@
 
 test.jar: $(wildcard camljava/test/*.java)

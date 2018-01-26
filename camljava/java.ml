@@ -44,9 +44,11 @@ struct
 
 end
 
-external instanceof : obj -> Class.t -> bool = "ocaml_java__instanceof"
+external instanceof : obj -> Class.t -> bool
+	= "ocaml_java__instanceof" [@@noalloc]
 
-external sameobject : obj -> obj -> bool = "ocaml_java__sameobject"
+external sameobject : obj -> obj -> bool
+	= "ocaml_java__sameobject" [@@noalloc]
 
 external objectclass : obj -> Class.t = "ocaml_java__objectclass"
 
@@ -59,8 +61,10 @@ external push_short : int -> unit = "ocaml_java__push_short" [@@noalloc]
 external push_int32 : int32 -> unit = "ocaml_java__push_int32" [@@noalloc]
 external push_long : int64 -> unit = "ocaml_java__push_long" [@@noalloc]
 external push_char : char -> unit = "ocaml_java__push_char" [@@noalloc]
-external push_float : float -> unit = "ocaml_java__push_float" [@@noalloc]
-external push_double : float -> unit = "ocaml_java__push_double" [@@noalloc]
+external push_float : (float [@unboxed]) -> unit
+	= "ocaml_java__push_float" "ocaml_java__push_float_unboxed" [@@noalloc]
+external push_double : (float [@unboxed]) -> unit
+	= "ocaml_java__push_double" "ocaml_java__push_double_unboxed" [@@noalloc]
 external push_string : string -> unit = "ocaml_java__push_string" [@@noalloc]
 external push_string_opt : string option -> unit
 	= "ocaml_java__push_string_opt" [@@noalloc]

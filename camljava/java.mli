@@ -36,31 +36,26 @@ module Class : sig
 
 	(** `find_class s` returns the class named `s`
 		Raises `Not_found` if the class does not exists *)
-	external find_class : string -> t = "ocaml_java__find_class"
+	val find_class : string -> t
 
 	(** `get_meth cls name sgt` returns the method
 			named `name` with signature `sgt`
 		Raises `Not_found` if the method does not exists with this signature *)
-	external get_meth : t -> string -> string -> meth
-		= "ocaml_java__class_get_meth"
+	val get_meth : t -> string -> string -> meth
 
 	(** Same as `get_meth`, for static methods *)
-	external get_meth_static : t -> string -> string -> meth_static
-		= "ocaml_java__class_get_meth_static"
+	val get_meth_static : t -> string -> string -> meth_static
 
 	(** Same as `get_meth`, for object constructor *)
-	external get_constructor : t -> string -> meth_constructor
-		= "ocaml_java__class_get_constructor"
+	val get_constructor : t -> string -> meth_constructor
 
 	(** `get_field cls name sgt` returns the field named `name`
 			with signature `sgt`
 		Raises `Not_found` if the field does not exists with this signature *)
-	external get_field : t -> string -> string -> field
-		= "ocaml_java__class_get_field"
+	val get_field : t -> string -> string -> field
 
 	(** Same as `get_field`, for static fields *)
-	external get_field_static : t -> string -> string -> field_static
-		= "ocaml_java__class_get_field_static"
+	val get_field_static : t -> string -> string -> field_static
 
 end
 
@@ -68,24 +63,26 @@ end
 	Returns `true` if `o` is an instance of the class `cls`
 	and is not `null`
 	or `false` otherwise *)
-external instanceof : obj -> Class.t -> bool = "ocaml_java__instanceof"
+external instanceof : obj -> Class.t -> bool
+	= "ocaml_java__instanceof" [@@noalloc]
 
 (** `sameobject a b`
 	Returns `true` if `a` and `b` refer to the same object or false otherwise
 	Not the same as `(=)` because `(=)` only compare references
 	while many difference references may point to the same object
 	(eg. global or weak references) *)
-external sameobject : obj -> obj -> bool = "ocaml_java__sameobject"
+external sameobject : obj -> obj -> bool
+	= "ocaml_java__sameobject" [@@noalloc]
 
 (** Returns the class of an object
 	Raises `Failure` if the object is `null` *)
-external objectclass : obj -> Class.t = "ocaml_java__objectclass"
+val objectclass : obj -> Class.t
 
 (** Instantiate a new object
 	Assume enough argument are in the calling stack (see `push`)
 	Raises `Exception` if the constructor thrown a Java exception
 	May crash for the same reason as `call` *)
-external new_ : Class.t -> meth_constructor -> obj = "ocaml_java__new"
+val new_ : Class.t -> meth_constructor -> obj
 
 (** Convertions
 	-
@@ -114,137 +111,141 @@ external push_short : int -> unit = "ocaml_java__push_short" [@@noalloc]
 external push_int32 : int32 -> unit = "ocaml_java__push_int32" [@@noalloc]
 external push_long : int64 -> unit = "ocaml_java__push_long" [@@noalloc]
 external push_char : char -> unit = "ocaml_java__push_char" [@@noalloc]
-external push_float : float -> unit = "ocaml_java__push_float" [@@noalloc]
-external push_double : float -> unit = "ocaml_java__push_double" [@@noalloc]
+external push_float : (float [@unboxed]) -> unit
+	= "ocaml_java__push_float" "ocaml_java__push_float_unboxed" [@@noalloc]
+external push_double : (float [@unboxed]) -> unit
+	= "ocaml_java__push_double" "ocaml_java__push_double_unboxed" [@@noalloc]
 external push_string : string -> unit = "ocaml_java__push_string" [@@noalloc]
-external push_string_opt : string option -> unit = "ocaml_java__push_string_opt" [@@noalloc]
+external push_string_opt : string option -> unit
+	= "ocaml_java__push_string_opt" [@@noalloc]
 external push_object : obj -> unit = "ocaml_java__push_object" [@@noalloc]
 external push_value : 'a -> unit = "ocaml_java__push_value" [@@noalloc]
-external push_value_opt : 'a option -> unit = "ocaml_java__push_value_opt" [@@noalloc]
+external push_value_opt : 'a option -> unit
+	= "ocaml_java__push_value_opt" [@@noalloc]
 
 (** Perform a call
 	Assume enough argument are in the calling stack (see `push`)
 	Raises `Failure` if the object is null
 	Raises `Exception` if the method throws a Java exception
 	May crash if some argument are missing or have the wrong representation *)
-external call_void : obj -> meth -> unit = "ocaml_java__call_void"
-external call_int : obj -> meth -> int = "ocaml_java__call_int"
-external call_bool : obj -> meth -> bool = "ocaml_java__call_bool"
-external call_byte : obj -> meth -> int = "ocaml_java__call_byte"
-external call_short : obj -> meth -> int = "ocaml_java__call_short"
-external call_int32 : obj -> meth -> int32 = "ocaml_java__call_int32"
-external call_long : obj -> meth -> int64 = "ocaml_java__call_long"
-external call_char : obj -> meth -> char = "ocaml_java__call_char"
-external call_float : obj -> meth -> float = "ocaml_java__call_float"
-external call_double : obj -> meth -> float = "ocaml_java__call_double"
+val call_void : obj -> meth -> unit
+val call_int : obj -> meth -> int
+val call_bool : obj -> meth -> bool
+val call_byte : obj -> meth -> int
+val call_short : obj -> meth -> int
+val call_int32 : obj -> meth -> int32
+val call_long : obj -> meth -> int64
+val call_char : obj -> meth -> char
+val call_float : obj -> meth -> float
+val call_double : obj -> meth -> float
 (** Raises `Failure` if the result is null *)
-external call_string : obj -> meth -> string = "ocaml_java__call_string"
-external call_string_opt : obj -> meth -> string option = "ocaml_java__call_string_opt"
-external call_object : obj -> meth -> obj = "ocaml_java__call_object"
+val call_string : obj -> meth -> string
+val call_string_opt : obj -> meth -> string option
+val call_object : obj -> meth -> obj
 (** Raises `Failure` if the result is null *)
-external call_value : obj -> meth -> 'a = "ocaml_java__call_value"
-external call_value_opt : obj -> meth -> 'a option = "ocaml_java__call_value_opt"
+val call_value : obj -> meth -> 'a
+val call_value_opt : obj -> meth -> 'a option
 
 (** Same as `call`, for static methods *)
-external call_static_void : Class.t -> meth_static -> unit = "ocaml_java__call_static_void"
-external call_static_int : Class.t -> meth_static -> int = "ocaml_java__call_static_int"
-external call_static_bool : Class.t -> meth_static -> bool = "ocaml_java__call_static_bool"
-external call_static_byte : Class.t -> meth_static -> int = "ocaml_java__call_static_byte"
-external call_static_short : Class.t -> meth_static -> int = "ocaml_java__call_static_short"
-external call_static_int32 : Class.t -> meth_static -> int32 = "ocaml_java__call_static_int32"
-external call_static_long : Class.t -> meth_static -> int64 = "ocaml_java__call_static_long"
-external call_static_char : Class.t -> meth_static -> char = "ocaml_java__call_static_char"
-external call_static_float : Class.t -> meth_static -> float = "ocaml_java__call_static_float"
-external call_static_double : Class.t -> meth_static -> float = "ocaml_java__call_static_double"
-external call_static_string : Class.t -> meth_static -> string = "ocaml_java__call_static_string"
-external call_static_string_opt : Class.t -> meth_static -> string option = "ocaml_java__call_static_string_opt"
-external call_static_object : Class.t -> meth_static -> obj = "ocaml_java__call_static_object"
-external call_static_value : Class.t -> meth_static -> 'a = "ocaml_java__call_static_value"
-external call_static_value_opt : Class.t -> meth_static -> 'a option = "ocaml_java__call_static_value_opt"
+val call_static_void : Class.t -> meth_static -> unit
+val call_static_int : Class.t -> meth_static -> int
+val call_static_bool : Class.t -> meth_static -> bool
+val call_static_byte : Class.t -> meth_static -> int
+val call_static_short : Class.t -> meth_static -> int
+val call_static_int32 : Class.t -> meth_static -> int32
+val call_static_long : Class.t -> meth_static -> int64
+val call_static_char : Class.t -> meth_static -> char
+val call_static_float : Class.t -> meth_static -> float
+val call_static_double : Class.t -> meth_static -> float
+val call_static_string : Class.t -> meth_static -> string
+val call_static_string_opt : Class.t -> meth_static -> string option
+val call_static_object : Class.t -> meth_static -> obj
+val call_static_value : Class.t -> meth_static -> 'a
+val call_static_value_opt : Class.t -> meth_static -> 'a option
 
 (** Same as `call`, for non-virtual call
 	Call the method of a specific class instead of the class of the object *)
-external call_nonvirtual_void : Class.t -> obj -> meth -> unit = "ocaml_java__call_nonvirtual_void"
-external call_nonvirtual_int : Class.t -> obj -> meth -> int = "ocaml_java__call_nonvirtual_int"
-external call_nonvirtual_bool : Class.t -> obj -> meth -> bool = "ocaml_java__call_nonvirtual_bool"
-external call_nonvirtual_byte : Class.t -> obj -> meth -> int = "ocaml_java__call_nonvirtual_byte"
-external call_nonvirtual_short : Class.t -> obj -> meth -> int = "ocaml_java__call_nonvirtual_short"
-external call_nonvirtual_int32 : Class.t -> obj -> meth -> int32 = "ocaml_java__call_nonvirtual_int32"
-external call_nonvirtual_long : Class.t -> obj -> meth -> int64 = "ocaml_java__call_nonvirtual_long"
-external call_nonvirtual_char : Class.t -> obj -> meth -> char = "ocaml_java__call_nonvirtual_char"
-external call_nonvirtual_float : Class.t -> obj -> meth -> float = "ocaml_java__call_nonvirtual_float"
-external call_nonvirtual_double : Class.t -> obj -> meth -> float = "ocaml_java__call_nonvirtual_double"
-external call_nonvirtual_string : Class.t -> obj -> meth -> string = "ocaml_java__call_nonvirtual_string"
-external call_nonvirtual_string_opt : Class.t -> obj -> meth -> string option = "ocaml_java__call_nonvirtual_string_opt"
-external call_nonvirtual_object : Class.t -> obj -> meth -> obj = "ocaml_java__call_nonvirtual_object"
-external call_nonvirtual_value : Class.t -> obj -> meth -> 'a = "ocaml_java__call_nonvirtual_value"
-external call_nonvirtual_value_opt : Class.t -> obj -> meth -> 'a option = "ocaml_java__call_nonvirtual_value_opt"
+val call_nonvirtual_void : Class.t -> obj -> meth -> unit
+val call_nonvirtual_int : Class.t -> obj -> meth -> int
+val call_nonvirtual_bool : Class.t -> obj -> meth -> bool
+val call_nonvirtual_byte : Class.t -> obj -> meth -> int
+val call_nonvirtual_short : Class.t -> obj -> meth -> int
+val call_nonvirtual_int32 : Class.t -> obj -> meth -> int32
+val call_nonvirtual_long : Class.t -> obj -> meth -> int64
+val call_nonvirtual_char : Class.t -> obj -> meth -> char
+val call_nonvirtual_float : Class.t -> obj -> meth -> float
+val call_nonvirtual_double : Class.t -> obj -> meth -> float
+val call_nonvirtual_string : Class.t -> obj -> meth -> string
+val call_nonvirtual_string_opt : Class.t -> obj -> meth -> string option
+val call_nonvirtual_object : Class.t -> obj -> meth -> obj
+val call_nonvirtual_value : Class.t -> obj -> meth -> 'a
+val call_nonvirtual_value_opt : Class.t -> obj -> meth -> 'a option
 
 (** Read the value of a field
 	May crash if the representation is incorrect *)
-external read_field_int : obj -> field -> int = "ocaml_java__read_field_int"
-external read_field_bool : obj -> field -> bool = "ocaml_java__read_field_bool"
-external read_field_byte : obj -> field -> int = "ocaml_java__read_field_byte"
-external read_field_short : obj -> field -> int = "ocaml_java__read_field_short"
-external read_field_int32 : obj -> field -> int32 = "ocaml_java__read_field_int32"
-external read_field_long : obj -> field -> int64 = "ocaml_java__read_field_long"
-external read_field_char : obj -> field -> char = "ocaml_java__read_field_char"
-external read_field_float : obj -> field -> float = "ocaml_java__read_field_float"
-external read_field_double : obj -> field -> float = "ocaml_java__read_field_double"
+val read_field_int : obj -> field -> int
+val read_field_bool : obj -> field -> bool
+val read_field_byte : obj -> field -> int
+val read_field_short : obj -> field -> int
+val read_field_int32 : obj -> field -> int32
+val read_field_long : obj -> field -> int64
+val read_field_char : obj -> field -> char
+val read_field_float : obj -> field -> float
+val read_field_double : obj -> field -> float
 (** Raises `Failure` if the value is `null` *)
-external read_field_string : obj -> field -> string = "ocaml_java__read_field_string"
-external read_field_string_opt : obj -> field -> string option = "ocaml_java__read_field_string_opt"
-external read_field_object : obj -> field -> obj = "ocaml_java__read_field_object"
+val read_field_string : obj -> field -> string
+val read_field_string_opt : obj -> field -> string option
+val read_field_object : obj -> field -> obj
 (** Raises `Failure` if the value is `null` *)
-external read_field_value : obj -> field -> 'a = "ocaml_java__read_field_value"
-external read_field_value_opt : obj -> field -> 'a option = "ocaml_java__read_field_value_opt"
+val read_field_value : obj -> field -> 'a
+val read_field_value_opt : obj -> field -> 'a option
 
 (** Same as `read_field`, for static fields *)
-external read_field_static_int : Class.t -> field_static -> int = "ocaml_java__read_field_static_int" [@@noalloc]
-external read_field_static_bool : Class.t -> field_static -> bool = "ocaml_java__read_field_static_bool" [@@noalloc]
-external read_field_static_byte : Class.t -> field_static -> int = "ocaml_java__read_field_static_byte" [@@noalloc]
-external read_field_static_short : Class.t -> field_static -> int = "ocaml_java__read_field_static_short" [@@noalloc]
-external read_field_static_int32 : Class.t -> field_static -> int32 = "ocaml_java__read_field_static_int32"
-external read_field_static_long : Class.t -> field_static -> int64 = "ocaml_java__read_field_static_long"
-external read_field_static_char : Class.t -> field_static -> char = "ocaml_java__read_field_static_char" [@@noalloc]
-external read_field_static_float : Class.t -> field_static -> float = "ocaml_java__read_field_static_float"
-external read_field_static_double : Class.t -> field_static -> float = "ocaml_java__read_field_static_double"
+val read_field_static_int : Class.t -> field_static -> int
+val read_field_static_bool : Class.t -> field_static -> bool
+val read_field_static_byte : Class.t -> field_static -> int
+val read_field_static_short : Class.t -> field_static -> int
+val read_field_static_int32 : Class.t -> field_static -> int32
+val read_field_static_long : Class.t -> field_static -> int64
+val read_field_static_char : Class.t -> field_static -> char
+val read_field_static_float : Class.t -> field_static -> float
+val read_field_static_double : Class.t -> field_static -> float
 (** Raises `Failure` if the value is `null` *)
-external read_field_static_string : Class.t -> field_static -> string = "ocaml_java__read_field_static_string"
-external read_field_static_string_opt : Class.t -> field_static -> string option = "ocaml_java__read_field_static_string_opt"
-external read_field_static_object : Class.t -> field_static -> obj = "ocaml_java__read_field_static_object"
+val read_field_static_string : Class.t -> field_static -> string
+val read_field_static_string_opt : Class.t -> field_static -> string option
+val read_field_static_object : Class.t -> field_static -> obj
 (** Raises `Failure` if the value is `null` *)
-external read_field_static_value : Class.t -> field_static -> 'a = "ocaml_java__read_field_static_value"
-external read_field_static_value_opt : Class.t -> field_static -> 'a option = "ocaml_java__read_field_static_value_opt"
+val read_field_static_value : Class.t -> field_static -> 'a
+val read_field_static_value_opt : Class.t -> field_static -> 'a option
 
 (** Write to a field *)
-external write_field_int : obj -> field -> int -> unit = "ocaml_java__write_field_int"
-external write_field_bool : obj -> field -> bool -> unit = "ocaml_java__write_field_bool"
-external write_field_byte : obj -> field -> int -> unit = "ocaml_java__write_field_byte"
-external write_field_short : obj -> field -> int -> unit = "ocaml_java__write_field_short"
-external write_field_int32 : obj -> field -> int32 -> unit = "ocaml_java__write_field_int32"
-external write_field_long : obj -> field -> int64 -> unit = "ocaml_java__write_field_long"
-external write_field_char : obj -> field -> char -> unit = "ocaml_java__write_field_char"
-external write_field_float : obj -> field -> float -> unit = "ocaml_java__write_field_float"
-external write_field_double : obj -> field -> float -> unit = "ocaml_java__write_field_double"
-external write_field_string : obj -> field -> string -> unit = "ocaml_java__write_field_string"
-external write_field_string_opt : obj -> field -> string option -> unit = "ocaml_java__write_field_string_opt"
-external write_field_object : obj -> field -> obj -> unit = "ocaml_java__write_field_object"
-external write_field_value : obj -> field -> 'a -> unit = "ocaml_java__write_field_value"
-external write_field_value_opt : obj -> field -> 'a option -> unit = "ocaml_java__write_field_value_opt"
+val write_field_int : obj -> field -> int -> unit
+val write_field_bool : obj -> field -> bool -> unit
+val write_field_byte : obj -> field -> int -> unit
+val write_field_short : obj -> field -> int -> unit
+val write_field_int32 : obj -> field -> int32 -> unit
+val write_field_long : obj -> field -> int64 -> unit
+val write_field_char : obj -> field -> char -> unit
+val write_field_float : obj -> field -> float -> unit
+val write_field_double : obj -> field -> float -> unit
+val write_field_string : obj -> field -> string -> unit
+val write_field_string_opt : obj -> field -> string option -> unit
+val write_field_object : obj -> field -> obj -> unit
+val write_field_value : obj -> field -> 'a -> unit
+val write_field_value_opt : obj -> field -> 'a option -> unit
 
 (** Same as `write_field`, for static fields *)
-external write_field_static_int : Class.t -> field_static -> int -> unit = "ocaml_java__write_field_static_int" [@@noalloc]
-external write_field_static_bool : Class.t -> field_static -> bool -> unit = "ocaml_java__write_field_static_bool" [@@noalloc]
-external write_field_static_byte : Class.t -> field_static -> int -> unit = "ocaml_java__write_field_static_byte" [@@noalloc]
-external write_field_static_short : Class.t -> field_static -> int -> unit = "ocaml_java__write_field_static_short" [@@noalloc]
-external write_field_static_int32 : Class.t -> field_static -> int32 -> unit = "ocaml_java__write_field_static_int32" [@@noalloc]
-external write_field_static_long : Class.t -> field_static -> int64 -> unit = "ocaml_java__write_field_static_long" [@@noalloc]
-external write_field_static_char : Class.t -> field_static -> char -> unit = "ocaml_java__write_field_static_char" [@@noalloc]
-external write_field_static_float : Class.t -> field_static -> float -> unit = "ocaml_java__write_field_static_float" [@@noalloc]
-external write_field_static_double : Class.t -> field_static -> float -> unit = "ocaml_java__write_field_static_double" [@@noalloc]
-external write_field_static_string : Class.t -> field_static -> string -> unit = "ocaml_java__write_field_static_string" [@@noalloc]
-external write_field_static_string_opt : Class.t -> field_static -> string option -> unit = "ocaml_java__write_field_static_string_opt" [@@noalloc]
-external write_field_static_object : Class.t -> field_static -> obj -> unit = "ocaml_java__write_field_static_object" [@@noalloc]
-external write_field_static_value : Class.t -> field_static -> 'a -> unit = "ocaml_java__write_field_static_value" [@@noalloc]
-external write_field_static_value_opt : Class.t -> field_static -> 'a option -> unit = "ocaml_java__write_field_static_value_opt" [@@noalloc]
+val write_field_static_int : Class.t -> field_static -> int -> unit
+val write_field_static_bool : Class.t -> field_static -> bool -> unit
+val write_field_static_byte : Class.t -> field_static -> int -> unit
+val write_field_static_short : Class.t -> field_static -> int -> unit
+val write_field_static_int32 : Class.t -> field_static -> int32 -> unit
+val write_field_static_long : Class.t -> field_static -> int64 -> unit
+val write_field_static_char : Class.t -> field_static -> char -> unit
+val write_field_static_float : Class.t -> field_static -> float -> unit
+val write_field_static_double : Class.t -> field_static -> float -> unit
+val write_field_static_string : Class.t -> field_static -> string -> unit
+val write_field_static_string_opt : Class.t -> field_static -> string option -> unit
+val write_field_static_object : Class.t -> field_static -> obj -> unit
+val write_field_static_value : Class.t -> field_static -> 'a -> unit
+val write_field_static_value_opt : Class.t -> field_static -> 'a option -> unit

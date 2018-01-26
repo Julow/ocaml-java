@@ -19,6 +19,8 @@ struct
 
 end
 
+let () = Callback.register "get_int_pair" (fun () -> (1, 2))
+
 let test () =
 	let open Java.Class in
 
@@ -52,31 +54,62 @@ let test () =
 	push_string "2";
 	let obj = new_ cls method_init_ab in
 
-	let test tname sigt push call expected =
-		let get_m = Class.get_meth cls ("test_get_" ^ tname) ("()" ^ sigt)
-		and id_m = Class.get_meth cls "test_id" ("(" ^ sigt ^ ")" ^ sigt) in
-		let v = call obj get_m in
-		(if v <> expected then
-			failwith ("test_get failure: " ^ tname));
-		push v;
-		let v' = call obj id_m in
-		(if v <> v' then
-			failwith ("test_id failure: " ^ tname))
+	let test_id_all () =
+		let test tname sigt push call get set get_static set_static expected set_v =
+			let get_m = Class.get_meth cls ("test_get_" ^ tname) ("()" ^ sigt)
+			and id_m = Class.get_meth cls "test_id" ("(" ^ sigt ^ ")" ^ sigt) in
+
+			let v = call obj get_m in
+			assert (v = expected);
+			push v;
+			let v' = call obj id_m in
+			assert (v = v');
+
+			let attr = Class.get_field cls ("test_attr_" ^ tname) sigt
+			and static = Class.get_field_static cls ("test_static_" ^ tname) sigt
+			and final = Class.get_field_static cls ("test_const_" ^ tname) sigt in
+
+			assert (get obj attr = expected);
+			set obj attr set_v;
+			assert (get obj attr = set_v);
+			set obj attr (get_static cls final);
+			assert (get obj attr = expected);
+
+			assert (get_static cls static = expected);
+			set_static cls static set_v;
+			assert (get_static cls static = set_v);
+			set_static cls static (get_static cls final);
+			assert (get_static cls static = expected);
+
+			()
+		in
+
+		test "int" "I" push_int call_int read_field_int write_field_int read_field_static_int write_field_static_int 1 ~-1;
+		test "float" "F" push_float call_float read_field_float write_field_float read_field_static_float write_field_static_float 2.0 ~-.2.0;
+		test "double" "D" push_double call_double read_field_double write_field_double read_field_static_double write_field_static_double 3.0 ~-.3.0;
+		test "string" "Ljava/lang/String;" push_string call_string read_field_string write_field_string read_field_static_string write_field_static_string "4" "-4";
+		test "string" "Ljava/lang/String;" push_string_opt call_string_opt read_field_string_opt write_field_string_opt read_field_static_string_opt write_field_static_string_opt (Some "4") None;
+		test "boolean" "Z" push_bool call_bool read_field_bool write_field_bool read_field_static_bool write_field_static_bool true false;
+		test "char" "C" push_char call_char read_field_char write_field_char read_field_static_char write_field_static_char '5' 'x';
+		test "byte" "B" push_byte call_byte read_field_byte write_field_byte read_field_static_byte write_field_static_byte 6 ~-6;
+		test "short" "S" push_short call_short read_field_short write_field_short read_field_static_short write_field_static_short 7 ~-7;
+		test "int32" "I" push_int32 call_int32 read_field_int32 write_field_int32 read_field_static_int32 write_field_static_int32 (Int32.of_int 8) (Int32.of_int ~-8);
+		test "int64" "J" push_long call_long read_field_long write_field_long read_field_static_long write_field_static_long (Int64.of_int 9) (Int64.of_int ~-9);
+		test "value" "Ljuloo/javacaml/Value;" push_value call_value read_field_value write_field_value read_field_static_value write_field_static_value (1, 2) (~-1, ~-2);
+		test "value" "Ljuloo/javacaml/Value;" push_value_opt call_value_opt read_field_value_opt write_field_value_opt read_field_static_value_opt write_field_static_value_opt (Some (1, 2)) None
 	in
-	test "int" "I" push_int call_int 1;
-	test "float" "F" push_float call_float 2.0;
-	test "double" "D" push_double call_double 3.0;
-	test "string" "Ljava/lang/String;" push_string call_string "4";
-	test "string" "Ljava/lang/String;" push_string_opt call_string_opt (Some "4");
-	test "boolean" "Z" push_bool call_bool true;
-	test "char" "C" push_char call_char '5';
-	test "byte" "B" push_byte call_byte 6;
-	test "short" "S" push_short call_short 7;
-	test "int32" "I" push_int32 call_int32 (Int32.of_int 8);
-	test "int64" "J" push_long call_long (Int64.of_int 9);
-	Callback.register "get_int_pair" (fun () -> (1, 2));
-	test "value" "Ljuloo/javacaml/Value;" push_value call_value (1, 2);
-	test "value" "Ljuloo/javacaml/Value;" push_value_opt call_value_opt (Some (1, 2));
+
+	test_id_all ();
+
+	let samples = 1 in
+	let sum = ref 0. in
+	for i = 0 to samples do
+		let t = Unix.gettimeofday () in
+		for i = 0 to 10_000 do test_id_all () done;
+		let t = Unix.gettimeofday () -. t in
+		sum := t +. !sum
+	done;
+	Printf.printf "Test times: %f\n" (!sum /. (float samples));
 
 	let id_obj_m = Class.get_meth cls "test_id" "(Ljava/lang/Object;)Ljava/lang/Object;" in
 

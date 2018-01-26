@@ -350,9 +350,9 @@ static jobject conv_to_value_opt(value opt)
 	GEN(bool,		Boolean,	jboolean,	Val_bool,			z,	Long_val) \
 	GEN(byte,		Byte,		jbyte,		Val_long,			b,	Long_val) \
 	GEN(short,		Short,		jshort,		Val_long,			s,	Long_val) \
+	GEN(char,		Char,		jchar,		Val_long,			c,	Long_val) \
 	GEN(int32,		Int,		jint,		caml_copy_int32,	i,	Int32_val) \
 	GEN(long,		Long,		jlong,		caml_copy_int64,	j,	Int64_val) \
-	GEN(char,		Char,		jchar,		Val_long,			c,	Long_val) \
 	GEN(float,		Float,		jfloat,		caml_copy_double,	f,	Double_val) \
 	GEN(double,		Double,		jdouble,	caml_copy_double,	d,	Double_val)
 
@@ -467,6 +467,14 @@ value ocaml_java__push_##NAME(value v)			\
 	return Val_unit;							\
 }
 
+#define GEN_PUSH_UNBOXED(NAME, TYPE, DST) \
+value ocaml_java__push_##NAME##_unboxed(TYPE v)		\
+{													\
+	arg_stack[arg_count].DST = v;					\
+	arg_count++;									\
+	return Val_unit;								\
+}
+
 // Generates write_field{,_static}_* functions
 #define GEN_WRITE(NAME, JNAME, DST, CONV_TO) \
 value ocaml_java__write_field_##NAME(value obj, value field, value v)			\
@@ -497,6 +505,9 @@ value ocaml_java__write_field_static_##NAME(value cls,					\
 
 GEN(GEN_CALL_READ_PUSH_WRITE)
 GEN_CALL_(void, Void, (void), Val_unit)
+GEN_PUSH_UNBOXED(float, double, f)
+GEN_PUSH_UNBOXED(double, double, d)
+
 
 #undef GEN_CALL_
 #undef GEN_CALL
