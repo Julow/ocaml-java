@@ -23,7 +23,7 @@ val create_char : int -> char t
 val create_float : int -> float t
 val create_double : int -> jdouble t
 val create_string : int -> string t
-val create_object : Java.Class.t -> Java.obj -> int -> Java.obj t
+val create_object : Java.jclass -> Java.obj -> int -> Java.obj t
 val create_value : int -> 'a jvalue t
 
 (** Returns the length of an array *)

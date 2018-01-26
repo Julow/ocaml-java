@@ -15,7 +15,7 @@ external create_char : int -> char t = "ocaml_java__jarray_create_char"
 external create_float : int -> float t = "ocaml_java__jarray_create_float"
 external create_double : int -> jdouble t = "ocaml_java__jarray_create_double"
 external create_string : int -> string t = "ocaml_java__jarray_create_string"
-external create_object : Java.Class.t -> Java.obj -> int -> Java.obj t
+external create_object : Java.jclass -> Java.obj -> int -> Java.obj t
 	= "ocaml_java__jarray_create_object"
 external create_value : int -> 'a jvalue t = "ocaml_java__jarray_create_value"
 

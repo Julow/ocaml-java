@@ -7,9 +7,9 @@ struct
 
 	let m_getMessage,
 		m_printStackTrace =
-		let cls = lazy (Class.find_class "java/lang/Throwable") in
-		lazy (Class.get_meth (Lazy.force cls) "getMessage" "()Ljava/lang/String;"),
-		lazy (Class.get_meth (Lazy.force cls) "printStackTrace" "()V")
+		let cls = lazy (Jclass.find_class "java/lang/Throwable") in
+		lazy (Jclass.get_meth (Lazy.force cls) "getMessage" "()Ljava/lang/String;"),
+		lazy (Jclass.get_meth (Lazy.force cls) "printStackTrace" "()V")
 
 	let get_message t =
 		call_string t (Lazy.force m_getMessage)
@@ -22,7 +22,7 @@ end
 let () = Callback.register "get_int_pair" (fun () -> (1, 2))
 
 let test () =
-	let open Java.Class in
+	let open Jclass in
 
 	let cls = find_class "camljava/test/Test" in
 
@@ -56,8 +56,8 @@ let test () =
 
 	let test_id_all () =
 		let test tname sigt push call get set get_static set_static arr_create arr_get arr_set expected set_v =
-			let get_m = Class.get_meth cls ("test_get_" ^ tname) ("()" ^ sigt)
-			and id_m = Class.get_meth cls "test_id" ("(" ^ sigt ^ ")" ^ sigt) in
+			let get_m = get_meth cls ("test_get_" ^ tname) ("()" ^ sigt)
+			and id_m = get_meth cls "test_id" ("(" ^ sigt ^ ")" ^ sigt) in
 
 			let v = call obj get_m in
 			assert (v = expected);
@@ -65,9 +65,9 @@ let test () =
 			let v' = call obj id_m in
 			assert (v = v');
 
-			let attr = Class.get_field cls ("test_attr_" ^ tname) sigt
-			and static = Class.get_field_static cls ("test_static_" ^ tname) sigt
-			and final = Class.get_field_static cls ("test_const_" ^ tname) sigt in
+			let attr = get_field cls ("test_attr_" ^ tname) sigt
+			and static = get_field_static cls ("test_static_" ^ tname) sigt
+			and final = get_field_static cls ("test_const_" ^ tname) sigt in
 
 			assert (get obj attr = expected);
 			set obj attr set_v;
@@ -81,8 +81,8 @@ let test () =
 			set_static cls static (get_static cls final);
 			assert (get_static cls static = expected);
 
-			let array_attr = Class.get_field_static cls ("test_array_" ^ tname) ("[" ^ sigt)
-			and set_array = Class.get_meth_static cls ("set_test_array_" ^ tname) ("([" ^ sigt ^ ")V") in
+			let array_attr = get_field_static cls ("test_array_" ^ tname) ("[" ^ sigt)
+			and set_array = get_meth_static cls ("set_test_array_" ^ tname) ("([" ^ sigt ^ ")V") in
 			let len = 10 in
 			let arr = arr_create 10 in
 
@@ -134,7 +134,7 @@ let test () =
 	done;
 	Printf.printf "Test times: %f\n" (!sum /. (float samples));
 
-	let id_obj_m = Class.get_meth cls "test_id" "(Ljava/lang/Object;)Ljava/lang/Object;" in
+	let id_obj_m = get_meth cls "test_id" "(Ljava/lang/Object;)Ljava/lang/Object;" in
 
 	let test_id push call v =
 		push v;
@@ -173,7 +173,7 @@ let test () =
 	end;
 
 	assert (instanceof obj cls);
-	assert (not (instanceof obj (Class.find_class "java/lang/String")));
+	assert (not (instanceof obj (find_class "java/lang/String")));
 	assert (sameobject obj obj);
 	assert (sameobject null null);
 	assert (not (sameobject obj null));
@@ -200,8 +200,8 @@ let test () =
 let () = Callback.register "camljava_do_test" test
 
 let test_javacaml () =
-	let cls = Java.Class.find_class "javacaml/test/Test" in
-	let m_do_test = Java.Class.get_meth_static cls "do_test" "()V" in
+	let cls = Jclass.find_class "javacaml/test/Test" in
+	let m_do_test = Jclass.get_meth_static cls "do_test" "()V" in
 	Java.call_static_void cls m_do_test
 
 let () =
