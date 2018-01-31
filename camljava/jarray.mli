@@ -30,8 +30,7 @@ val create_value : int -> 'a jvalue t
 external length : 'a t -> int = "ocaml_java__jarray_length"
 
 (** Set an element
-	Raises `Java.Exception` if the index is out of bounds
-		(java.lang.ArrayIndexOutOfBoundsException) *)
+	Raises `Invalid_argument` if the index is out of bounds *)
 val set_int : int t -> int -> int -> unit
 val set_bool : bool t -> int -> bool -> unit
 val set_byte : jbyte t -> int -> int -> unit
@@ -49,6 +48,7 @@ val set_value_opt : 'a jvalue t -> int -> 'a option -> unit
 val set_array : 'a t t -> int -> 'a t -> unit
 
 (** Retrieve an element
+	Raises `Invalid_argument` if the index is out of bounds
 	Raises `Failure` if the element is `null`
 		and the representation is `String`, `Value` or `Array ..` *)
 val get_int : int t -> int -> int

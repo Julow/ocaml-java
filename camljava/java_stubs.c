@@ -111,7 +111,10 @@ value ocaml_java__find_class(value name)
 
 	c = (*env)->FindClass(env, String_val(name));
 	if (c == NULL)
+	{
+		(*env)->ExceptionClear(env);
 		caml_raise_not_found();
+	}
 	return alloc_java_obj(env, c);
 }
 
@@ -121,7 +124,10 @@ static value get_method(jobject class_, char const *name, char const *sig)
 
 	id = (*env)->GetMethodID(env, class_, name, sig);
 	if (id == NULL)
+	{
+		(*env)->ExceptionClear(env);
 		caml_raise_not_found();
+	}
 	return caml_copy_nativeint((intnat)id);
 }
 
@@ -137,7 +143,10 @@ value ocaml_java__class_get_meth_static(value class_, value name, value sig)
 	id = (*env)->GetStaticMethodID(env, Java_obj_val(class_),
 			String_val(name), String_val(sig));
 	if (id == NULL)
+	{
+		(*env)->ExceptionClear(env);
 		caml_raise_not_found();
+	}
 	return caml_copy_nativeint((intnat)id);
 }
 
@@ -153,7 +162,10 @@ value ocaml_java__class_get_field(value class_, value name, value sig)
 	id = (*env)->GetFieldID(env, Java_obj_val(class_),
 			String_val(name), String_val(sig));
 	if (id == NULL)
+	{
+		(*env)->ExceptionClear(env);
 		caml_raise_not_found();
+	}
 	return caml_copy_nativeint((intnat)id);
 }
 
@@ -164,7 +176,10 @@ value ocaml_java__class_get_field_static(value class_, value name, value sig)
 	id = (*env)->GetStaticFieldID(env, Java_obj_val(class_),
 			String_val(name), String_val(sig));
 	if (id == NULL)
+	{
+		(*env)->ExceptionClear(env);
 		caml_raise_not_found();
+	}
 	return caml_copy_nativeint((intnat)id);
 }
 
@@ -570,12 +585,21 @@ value ocaml_java__jarray_length(value array)
 	return Val_long((*env)->GetArrayLength(env, Java_obj_val(array)));
 }
 
+static void	check_out_of_bound_exception(void)
+{
+	if ((*env)->ExceptionOccurred(env) == NULL)
+		return ;
+	(*env)->ExceptionClear(env);
+	caml_invalid_argument("index out of bound");
+}
+
 #define GEN_JARRAY_SET_PRIM(NAME, JNAME, TYPE, CONV_OF, DST, CONV_TO) \
 value ocaml_java__jarray_set_##NAME(value array, value index, value v)		\
 {																			\
 	TYPE const buf = CONV_TO(v);											\
 	(*env)->Set##JNAME##ArrayRegion(env, Java_obj_val(array),				\
 			Long_val(index), 1, &buf);										\
+	check_out_of_bound_exception();											\
 	return Val_unit;														\
 }
 
@@ -584,6 +608,7 @@ value ocaml_java__jarray_set_##NAME(value array, value index, value v)		\
 {																			\
 	(*env)->SetObjectArrayElement(env, Java_obj_val(array),					\
 			Long_val(index), CONV_TO(v));									\
+	check_out_of_bound_exception();											\
 	return Val_unit;														\
 }
 
@@ -593,15 +618,19 @@ value ocaml_java__jarray_get_##NAME(value array, value index)				\
 	TYPE buf;																\
 	(*env)->Get##JNAME##ArrayRegion(env, Java_obj_val(array),				\
 			Long_val(index), 1, &buf);										\
+	check_out_of_bound_exception();											\
 	return CONV_OF(buf);													\
 }
 
 #define GEN_JARRAY_GET_OBJ(NAME, JNAME, TYPE, CONV_OF, ...) \
 value ocaml_java__jarray_get_##NAME(value array, value index)				\
 {																			\
-	return CONV_OF((*env)->GetObjectArrayElement(env,						\
-			Java_obj_val(array),											\
-			Long_val(index)));												\
+	jobject obj;															\
+																			\
+	obj = (*env)->GetObjectArrayElement(env,								\
+			Java_obj_val(array), Long_val(index));							\
+	check_out_of_bound_exception();											\
+	return CONV_OF(obj);													\
 }
 
 GEN_PRIM(GEN_JARRAY_SET_PRIM)
