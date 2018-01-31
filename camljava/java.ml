@@ -4,13 +4,15 @@ type 'a jarray
 
 type jclass
 
+type jthrowable
+
 type meth
 type meth_static
 type meth_constructor
 type field
 type field_static
 
-exception Exception of obj
+exception Exception of jthrowable
 
 external startup : string array -> unit = "ocaml_java__startup"
 external shutdown : unit -> unit = "ocaml_java__shutdown"
@@ -22,7 +24,7 @@ let init opts =
 let null : obj = (Obj.magic 0)
 
 let () =
-	Callback.register_exception "Java.Exception" (Exception null)
+	Callback.register_exception "Java.Exception" (Exception (Obj.magic 0))
 
 external instanceof : obj -> jclass -> bool
 	= "ocaml_java__instanceof" [@@noalloc]

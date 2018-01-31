@@ -88,10 +88,13 @@ static void empty_stack(void)
 }
 
 // Throw a CamlException in reaction of `exn`
+// If ExceptionOccurred is set, let it through and do not throw a CamlException
 static void throw_caml_exception(JNIEnv *env, value exn)
 {
-	char *exn_message;
+	char		*exn_message;
 
+	if ((*env)->ExceptionOccurred(env) != NULL)
+		return ;
 	// function from caml/printexc.h
 	exn_message = caml_format_exception(exn);
 	(*env)->ThrowNew(env, CamlException, exn_message);

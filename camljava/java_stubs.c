@@ -608,3 +608,20 @@ GEN_PRIM(GEN_JARRAY_SET_PRIM)
 GEN_OBJ(GEN_JARRAY_SET_OBJ)
 GEN_PRIM(GEN_JARRAY_GET_PRIM)
 GEN_OBJ(GEN_JARRAY_GET_OBJ)
+
+/*
+** ========================================================================== **
+** Jthrowable API
+*/
+
+value ocaml_java__jthrowable_throw(value thrwbl)
+{
+	(*env)->Throw(env, Java_obj_val(thrwbl));
+	return Val_unit;
+}
+
+value ocaml_java__jthrowable_throw_new(value cls, value msg)
+{
+	(*env)->ThrowNew(env, Java_obj_val(cls), String_val(msg));
+	return Val_unit;
+}

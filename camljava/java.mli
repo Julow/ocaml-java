@@ -13,6 +13,9 @@ type 'a jarray
 	See the `Jclass` module *)
 type jclass
 
+(* Java throwable objects *)
+type jthrowable
+
 (** Methods and fields
 	There is a type for each type of method/field
 	meth				Member method
@@ -28,7 +31,7 @@ type field_static
 
 (** Raised when a java exception is thrown
 	The parameter is the java Exception *)
-exception Exception of obj
+exception Exception of jthrowable
 
 (** Initialize the JVM
 	Takes the JVM options as parameter *)

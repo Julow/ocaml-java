@@ -46,6 +46,31 @@ public class Test
 			assert false;
 		} catch (CamlException e) {}
 
+// Jthrowable
+		try
+		{
+			Caml.function(Caml.getCallback("test_throw"));
+			Caml.argObject(new Exception("lol1"));
+			Caml.callUnit();
+			assert false;
+		}
+		catch (Exception e)
+		{
+			assert e.getMessage().equals("lol1");
+		}
+
+		try
+		{
+			Caml.function(Caml.getCallback("test_throw_new"));
+			Caml.argString("lol2");
+			Caml.callUnit();
+			assert false;
+		}
+		catch (Exception e)
+		{
+			assert e.getMessage().equals("lol2");
+		}
+
 // arg*/call*
 		Caml.function(Caml.getCallback("test_int"));
 		Caml.argInt(12);

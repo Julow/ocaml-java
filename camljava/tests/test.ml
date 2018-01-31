@@ -1,24 +1,5 @@
 (*  *)
 
-module Throwable =
-struct
-
-	open Java
-
-	let m_getMessage,
-		m_printStackTrace =
-		let cls = lazy (Jclass.find_class "java/lang/Throwable") in
-		lazy (Jclass.get_meth (Lazy.force cls) "getMessage" "()Ljava/lang/String;"),
-		lazy (Jclass.get_meth (Lazy.force cls) "printStackTrace" "()V")
-
-	let get_message t =
-		call_string t (Lazy.force m_getMessage)
-
-	let print_stack_trace t =
-		call_void t (Lazy.force m_printStackTrace)
-
-end
-
 let () = Callback.register "get_int_pair" (fun () -> (1, 2))
 
 let test () =
@@ -169,7 +150,8 @@ let test () =
 		call_void obj (get_meth cls "raise" "()V");
 		assert false
 	with Java.Exception ex ->
-		assert (Throwable.get_message ex = "test")
+		assert (Jthrowable.get_message ex = "test");
+		assert (Jthrowable.get_localized_message ex = "test")
 	end;
 
 	assert (instanceof obj cls);
@@ -220,6 +202,6 @@ let () =
 			test ();
 			(* test_javacaml *) ()
 		with Java.Exception e ->
-			Throwable.print_stack_trace e;
+			Jthrowable.print_stack_trace e;
 			failwith ""
 	end

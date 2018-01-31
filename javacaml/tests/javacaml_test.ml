@@ -19,4 +19,8 @@ let () =
 	Callback.register "test_b" snd;
 	Callback.register "get_obj" (fun () -> test_obj);
 	Callback.register "is_null" (fun obj -> obj = Java.null);
+	Callback.register "test_throw" (fun thwbl -> Jthrowable.throw thwbl);
+	Callback.register "test_throw_new" (fun msg ->
+		let cls = Jclass.find_class "java/lang/Exception" in
+		Jthrowable.throw_new cls msg);
 	print_endline "OCaml loaded"
