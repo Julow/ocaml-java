@@ -12,6 +12,9 @@ public class Caml
 	 * Initialize the library and OCaml.
 	 * Must be called once, before anything else
 	 *
+	 * Throws CamlException if an OCaml exception is raised
+	 * May throws any exception (with Jthrowable.throw/throw_new)
+	 *
 	 * > `caml_startup`
 	 */
 	public static native void startup();
@@ -108,6 +111,7 @@ public class Caml
 	 * Same convertions as the `arg` functions
 	 *
 	 * Throws CamlException if an OCaml exception is raised
+	 * May throws any exception (with Jthrowable.throw/throw_new)
 	 */
 	public static native void callUnit() throws CamlException;
 	public static native int callInt() throws CamlException;

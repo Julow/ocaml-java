@@ -200,7 +200,7 @@ let () =
 		|];
 		try
 			test ();
-			(* test_javacaml *) ()
+			test_javacaml ()
 		with Java.Exception e ->
 			Jthrowable.print_stack_trace e;
 			failwith ""
