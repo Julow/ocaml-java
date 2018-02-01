@@ -20,24 +20,25 @@ OCAMLOPTFLAGS = -I $(B) -I $(T)
 
 # -
 
-CMX_FILES = $(B)/java.cmx $(B)/jarray.cmx $(B)/jclass.cmx $(B)/jthrowable.cmx
+CMX_FILES = $(T)/java.cmx $(T)/jarray.cmx $(T)/jclass.cmx $(T)/jthrowable.cmx
 
-$(B)/java.o $(B)/java.cmx: camljava/java.ml $(T)/java.cmi | $(B)
+$(B)/java.o $(T)/java.cmx: camljava/java.ml $(T)/java.cmi | $(B) $(T)
 $(T)/java.cmi: camljava/java.mli | $(T)
 
-$(B)/jarray.o $(B)/jarray.cmx: camljava/jarray.ml $(T)/jarray.cmi $(T)/java.cmi | $(B)
+$(B)/jarray.o $(T)/jarray.cmx: camljava/jarray.ml $(T)/jarray.cmi $(T)/java.cmi | $(B) $(T)
 $(T)/jarray.cmi: camljava/jarray.mli | $(T)
 
-$(B)/jclass.o $(B)/jclass.cmx: camljava/jclass.ml $(T)/jclass.cmi $(T)/java.cmi | $(B)
+$(B)/jclass.o $(T)/jclass.cmx: camljava/jclass.ml $(T)/jclass.cmi $(T)/java.cmi | $(B) $(T)
 $(T)/jclass.cmi: camljava/jclass.mli | $(T)
 
-$(B)/jthrowable.o $(B)/jthrowable.cmx: camljava/jthrowable.ml $(T)/jthrowable.cmi $(T)/java.cmi | $(B)
+$(B)/jthrowable.o $(T)/jthrowable.cmx: camljava/jthrowable.ml $(T)/jthrowable.cmi $(T)/java.cmi | $(B) $(T)
 $(T)/jthrowable.cmi: camljava/jthrowable.mli | $(T)
 
 clean::
-	rm -f $(B)/java.o $(B)/java.cmx $(T)/java.cmi
-	rm -f $(B)/jarray.o $(B)/jarray.cmx $(T)/jarray.cmi
-	rm -f $(B)/jclass.o $(B)/jclass.cmx $(T)/jclass.cmi
+	rm -f $(B)/java.o $(T)/java.cmx $(T)/java.cmi
+	rm -f $(B)/jarray.o $(T)/jarray.cmx $(T)/jarray.cmi
+	rm -f $(B)/jclass.o $(T)/jclass.cmx $(T)/jclass.cmi
+	rm -f $(B)/jthrowable.o $(T)/jthrowable.cmx $(T)/jthrowable.cmi
 
 OBJ_FILES = $(B)/java_stubs.o $(B)/caml.o
 
@@ -47,8 +48,8 @@ $(B)/caml.o: javacaml/caml.c | $(B)
 clean::
 	rm -f $(B)/java_stubs.o $(B)/caml.o
 
-$(T)/camljava.a $(T)/camljava.cmxa: | $(T)/libcamljava.a
-$(T)/javacaml.a $(T)/javacaml.cmxa: | $(T)/libjavacaml.a
+$(T)/camljava.a $(T)/camljava.cmxa: $(T)/libcamljava.a
+$(T)/javacaml.a $(T)/javacaml.cmxa: $(T)/libjavacaml.a
 
 $(T)/camljava.cmxa: LINK = -lcamljava -ljvm
 $(T)/javacaml.cmxa: LINK = -ljavacaml
@@ -57,7 +58,7 @@ $(T)/javacaml.cmxa: LINK = -ljavacaml
 $(T)/camljava.cmxa $(T)/javacaml.cmxa: $(CMX_FILES) | $(T)
 	$(OCAMLOPT) $(OCAMLOPTFLAGS) -linkall -a \
 		-cclib "$(CCLIBS) $(LINK)" \
-		-o $@ $^
+		-o $@ $(CMX_FILES)
 
 $(T)/libcamljava.a $(T)/libjavacaml.a: $(OBJ_FILES) | $(T)
 	ar rcs $@ $^

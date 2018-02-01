@@ -12,12 +12,14 @@ run: all
 all: | libs
 	make a.out test.jar
 
-a.out: $(JAVACAML_TESTS_DIR)/javacaml_test.ml $(wildcard *.ml)
+ML_FILES = $(JAVACAML_TESTS_DIR)/javacaml_test.ml $(wildcard *.ml)
+
+a.out: $(ML_FILES) $(OCAMLJAVA_DIR)/bin/camljava.cmxa
 	ocamlopt \
 		-I $(OCAMLJAVA_DIR)/bin camljava.cmxa \
 		unix.cmxa \
 		-g \
-		$^ -o $@
+		$(ML_FILES) -o $@
 
 test.jar: $(wildcard camljava/test/*.java)
 	javac -cp $(OCAMLJAVA_DIR)/bin/ocaml-java.jar $^

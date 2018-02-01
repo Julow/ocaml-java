@@ -59,3 +59,4 @@ re: clean
 	make all
 
 .PHONY: all container clean re
+.PHONY: $(T)/camljava.cmxa $(T)/javacaml.cmxa $(T)/ocaml-java.jar
