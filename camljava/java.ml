@@ -110,37 +110,37 @@ external call_static_value_opt : jclass -> meth_static -> 'a option
 external call_static_array : jclass -> meth_static -> 'a jarray
 	= "ocaml_java__call_static_array"
 
-external call_nonvirtual_void : jclass -> obj -> meth -> unit
+external call_nonvirtual_void : obj -> jclass -> meth -> unit
 	= "ocaml_java__call_nonvirtual_void"
-external call_nonvirtual_int : jclass -> obj -> meth -> int
+external call_nonvirtual_int : obj -> jclass -> meth -> int
 	= "ocaml_java__call_nonvirtual_int"
-external call_nonvirtual_bool : jclass -> obj -> meth -> bool
+external call_nonvirtual_bool : obj -> jclass -> meth -> bool
 	= "ocaml_java__call_nonvirtual_bool"
-external call_nonvirtual_byte : jclass -> obj -> meth -> int
+external call_nonvirtual_byte : obj -> jclass -> meth -> int
 	= "ocaml_java__call_nonvirtual_byte"
-external call_nonvirtual_short : jclass -> obj -> meth -> int
+external call_nonvirtual_short : obj -> jclass -> meth -> int
 	= "ocaml_java__call_nonvirtual_short"
-external call_nonvirtual_int32 : jclass -> obj -> meth -> int32
+external call_nonvirtual_int32 : obj -> jclass -> meth -> int32
 	= "ocaml_java__call_nonvirtual_int32"
-external call_nonvirtual_long : jclass -> obj -> meth -> int64
+external call_nonvirtual_long : obj -> jclass -> meth -> int64
 	= "ocaml_java__call_nonvirtual_long"
-external call_nonvirtual_char : jclass -> obj -> meth -> char
+external call_nonvirtual_char : obj -> jclass -> meth -> char
 	= "ocaml_java__call_nonvirtual_char"
-external call_nonvirtual_float : jclass -> obj -> meth -> float
+external call_nonvirtual_float : obj -> jclass -> meth -> float
 	= "ocaml_java__call_nonvirtual_float"
-external call_nonvirtual_double : jclass -> obj -> meth -> float
+external call_nonvirtual_double : obj -> jclass -> meth -> float
 	= "ocaml_java__call_nonvirtual_double"
-external call_nonvirtual_string : jclass -> obj -> meth -> string
+external call_nonvirtual_string : obj -> jclass -> meth -> string
 	= "ocaml_java__call_nonvirtual_string"
-external call_nonvirtual_string_opt : jclass -> obj -> meth -> string option
+external call_nonvirtual_string_opt : obj -> jclass -> meth -> string option
 	= "ocaml_java__call_nonvirtual_string_opt"
-external call_nonvirtual_object : jclass -> obj -> meth -> obj
+external call_nonvirtual_object : obj -> jclass -> meth -> obj
 	= "ocaml_java__call_nonvirtual_object"
-external call_nonvirtual_value : jclass -> obj -> meth -> 'a
+external call_nonvirtual_value : obj -> jclass -> meth -> 'a
 	= "ocaml_java__call_nonvirtual_value"
-external call_nonvirtual_value_opt : jclass -> obj -> meth -> 'a option
+external call_nonvirtual_value_opt : obj -> jclass -> meth -> 'a option
 	= "ocaml_java__call_nonvirtual_value_opt"
-external call_nonvirtual_array : jclass -> obj -> meth -> 'a jarray
+external call_nonvirtual_array : obj -> jclass -> meth -> 'a jarray
 	= "ocaml_java__call_nonvirtual_array"
 
 external read_field_int : obj -> field -> int

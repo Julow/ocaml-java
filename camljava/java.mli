@@ -149,22 +149,22 @@ val call_static_array : jclass -> meth_static -> 'a jarray
 
 (** Same as `call`, for non-virtual call
 	Call the method of a specific class instead of the class of the object *)
-val call_nonvirtual_void : jclass -> obj -> meth -> unit
-val call_nonvirtual_int : jclass -> obj -> meth -> int
-val call_nonvirtual_bool : jclass -> obj -> meth -> bool
-val call_nonvirtual_byte : jclass -> obj -> meth -> int
-val call_nonvirtual_short : jclass -> obj -> meth -> int
-val call_nonvirtual_int32 : jclass -> obj -> meth -> int32
-val call_nonvirtual_long : jclass -> obj -> meth -> int64
-val call_nonvirtual_char : jclass -> obj -> meth -> char
-val call_nonvirtual_float : jclass -> obj -> meth -> float
-val call_nonvirtual_double : jclass -> obj -> meth -> float
-val call_nonvirtual_string : jclass -> obj -> meth -> string
-val call_nonvirtual_string_opt : jclass -> obj -> meth -> string option
-val call_nonvirtual_object : jclass -> obj -> meth -> obj
-val call_nonvirtual_value : jclass -> obj -> meth -> 'a
-val call_nonvirtual_value_opt : jclass -> obj -> meth -> 'a option
-val call_nonvirtual_array : jclass -> obj -> meth -> 'a jarray
+val call_nonvirtual_void : obj -> jclass -> meth -> unit
+val call_nonvirtual_int : obj -> jclass -> meth -> int
+val call_nonvirtual_bool : obj -> jclass -> meth -> bool
+val call_nonvirtual_byte : obj -> jclass -> meth -> int
+val call_nonvirtual_short : obj -> jclass -> meth -> int
+val call_nonvirtual_int32 : obj -> jclass -> meth -> int32
+val call_nonvirtual_long : obj -> jclass -> meth -> int64
+val call_nonvirtual_char : obj -> jclass -> meth -> char
+val call_nonvirtual_float : obj -> jclass -> meth -> float
+val call_nonvirtual_double : obj -> jclass -> meth -> float
+val call_nonvirtual_string : obj -> jclass -> meth -> string
+val call_nonvirtual_string_opt : obj -> jclass -> meth -> string option
+val call_nonvirtual_object : obj -> jclass -> meth -> obj
+val call_nonvirtual_value : obj -> jclass -> meth -> 'a
+val call_nonvirtual_value_opt : obj -> jclass -> meth -> 'a option
+val call_nonvirtual_array : obj -> jclass -> meth -> 'a jarray
 
 (** Read the value of a field
 	May crash if the representation is incorrect *)
