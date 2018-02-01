@@ -36,7 +36,8 @@ let test () =
 	let obj = new_ cls method_init_ab in
 
 	let test_id_all () =
-		let test tname sigt push call get set get_static set_static arr_create arr_get arr_set expected set_v =
+		let test tname sigt push call get set get_static set_static arr_create arr_get arr_set
+				expected set_v =
 			let get_m = get_meth cls ("test_get_" ^ tname) ("()" ^ sigt)
 			and id_m = get_meth cls "test_id" ("(" ^ sigt ^ ")" ^ sigt) in
 
@@ -72,6 +73,14 @@ let test () =
 			for i = 0 to len - 1 do arr_set arr i expected done;
 			all_eq arr expected;
 
+			let try_invalid_getset i =
+				begin try ignore (arr_get arr i); assert false with Invalid_argument _ -> () end;
+				begin try arr_set arr i expected; assert false with Invalid_argument _ -> () end
+			in
+
+			try_invalid_getset ~-1;
+			try_invalid_getset len;
+
 			push_array arr;
 			call_static_void cls set_array;
 
@@ -88,32 +97,61 @@ let test () =
 			()
 		in
 
-		test "int" "I" push_int call_int read_field_int write_field_int read_field_static_int write_field_static_int Jarray.create_int Jarray.get_int Jarray.set_int 1 ~-1;
-		test "float" "F" push_float call_float read_field_float write_field_float read_field_static_float write_field_static_float Jarray.create_float Jarray.get_float Jarray.set_float 2.0 ~-.2.0;
-		test "double" "D" push_double call_double read_field_double write_field_double read_field_static_double write_field_static_double Jarray.create_double Jarray.get_double Jarray.set_double 3.0 ~-.3.0;
-		test "string" "Ljava/lang/String;" push_string call_string read_field_string write_field_string read_field_static_string write_field_static_string Jarray.create_string Jarray.get_string Jarray.set_string "4" "-4";
-		test "string" "Ljava/lang/String;" push_string_opt call_string_opt read_field_string_opt write_field_string_opt read_field_static_string_opt write_field_static_string_opt Jarray.create_string Jarray.get_string_opt Jarray.set_string_opt (Some "4") None;
-		test "boolean" "Z" push_bool call_bool read_field_bool write_field_bool read_field_static_bool write_field_static_bool Jarray.create_bool Jarray.get_bool Jarray.set_bool true false;
-		test "char" "C" push_char call_char read_field_char write_field_char read_field_static_char write_field_static_char Jarray.create_char Jarray.get_char Jarray.set_char '5' 'x';
-		test "byte" "B" push_byte call_byte read_field_byte write_field_byte read_field_static_byte write_field_static_byte Jarray.create_byte Jarray.get_byte Jarray.set_byte 6 ~-6;
-		test "short" "S" push_short call_short read_field_short write_field_short read_field_static_short write_field_static_short Jarray.create_short Jarray.get_short Jarray.set_short 7 ~-7;
-		test "int32" "I" push_int32 call_int32 read_field_int32 write_field_int32 read_field_static_int32 write_field_static_int32 Jarray.create_int32 Jarray.get_int32 Jarray.set_int32 (Int32.of_int 8) (Int32.of_int ~-8);
-		test "int64" "J" push_long call_long read_field_long write_field_long read_field_static_long write_field_static_long Jarray.create_long Jarray.get_long Jarray.set_long (Int64.of_int 9) (Int64.of_int ~-9);
-		test "value" "Ljuloo/javacaml/Value;" push_value call_value read_field_value write_field_value read_field_static_value write_field_static_value Jarray.create_value Jarray.get_value Jarray.set_value (1, 2) (~-1, ~-2);
-		test "value" "Ljuloo/javacaml/Value;" push_value_opt call_value_opt read_field_value_opt write_field_value_opt read_field_static_value_opt write_field_static_value_opt Jarray.create_value Jarray.get_value_opt Jarray.set_value_opt (Some (1, 2)) None
+		test "int" "I" push_int call_int read_field_int write_field_int read_field_static_int
+			write_field_static_int Jarray.create_int Jarray.get_int Jarray.set_int 1 ~-1;
+		test "float" "F" push_float call_float read_field_float write_field_float read_field_static_float
+			write_field_static_float Jarray.create_float Jarray.get_float Jarray.set_float 2.0 ~-.2.0;
+		test "double" "D" push_double call_double read_field_double write_field_double
+			read_field_static_double write_field_static_double Jarray.create_double Jarray.get_double
+			Jarray.set_double 3.0 ~-.3.0;
+		test "string" "Ljava/lang/String;" push_string call_string read_field_string write_field_string
+			read_field_static_string write_field_static_string Jarray.create_string Jarray.get_string
+			Jarray.set_string "4" "-4";
+		test "string" "Ljava/lang/String;" push_string_opt call_string_opt read_field_string_opt
+			write_field_string_opt read_field_static_string_opt write_field_static_string_opt
+			Jarray.create_string Jarray.get_string_opt Jarray.set_string_opt (Some "4") None;
+		test "boolean" "Z" push_bool call_bool read_field_bool write_field_bool read_field_static_bool
+		write_field_static_bool Jarray.create_bool Jarray.get_bool Jarray.set_bool true false;
+		test "char" "C" push_char call_char read_field_char write_field_char read_field_static_char
+			write_field_static_char Jarray.create_char Jarray.get_char Jarray.set_char '5' 'x';
+		test "byte" "B" push_byte call_byte read_field_byte write_field_byte read_field_static_byte
+			write_field_static_byte Jarray.create_byte Jarray.get_byte Jarray.set_byte 6 ~-6;
+		test "short" "S" push_short call_short read_field_short write_field_short read_field_static_short
+			write_field_static_short Jarray.create_short Jarray.get_short Jarray.set_short 7 ~-7;
+		test "int32" "I" push_int32 call_int32 read_field_int32 write_field_int32 read_field_static_int32
+			write_field_static_int32 Jarray.create_int32 Jarray.get_int32 Jarray.set_int32 (Int32.of_int 8)
+			(Int32.of_int ~-8);
+		test "int64" "J" push_long call_long read_field_long write_field_long read_field_static_long
+			write_field_static_long Jarray.create_long Jarray.get_long Jarray.set_long (Int64.of_int 9)
+			(Int64.of_int ~-9);
+		test "value" "Ljuloo/javacaml/Value;" push_value call_value read_field_value write_field_value
+			read_field_static_value write_field_static_value Jarray.create_value Jarray.get_value
+			Jarray.set_value (1, 2) (~-1, ~-2);
+		test "value" "Ljuloo/javacaml/Value;" push_value_opt call_value_opt read_field_value_opt
+			write_field_value_opt read_field_static_value_opt write_field_static_value_opt
+			Jarray.create_value Jarray.get_value_opt Jarray.set_value_opt (Some (1, 2)) None
 	in
 
 	test_id_all ();
 
-	let samples = 1 in
+	let samples = 3 in
 	let sum = ref 0. in
-	for i = 0 to samples do
+	for i = 0 to samples - 1 do
 		let t = Unix.gettimeofday () in
-		for i = 0 to 10_000 do test_id_all () done;
+		for i = 0 to 500 do test_id_all () done;
 		let t = Unix.gettimeofday () -. t in
 		sum := t +. !sum
 	done;
 	Printf.printf "Test times: %f\n" (!sum /. (float samples));
+
+	for i = 0 to 500 do
+		begin try ignore @@ find_class "unknown"; assert false with Not_found -> () end;
+		begin try ignore @@ get_meth cls "unknown" "()V"; assert false with Not_found -> () end;
+		begin try ignore @@ get_meth_static cls "unknown" "()V"; assert false with Not_found -> () end;
+		begin try ignore @@ get_constructor cls "(IIII)V"; assert false with Not_found -> () end;
+		begin try ignore @@ get_field cls "unknown" "()V"; assert false with Not_found -> () end;
+		begin try ignore @@ get_field_static cls "unknown" "()V"; assert false with Not_found -> () end
+	done;
 
 	let id_obj_m = get_meth cls "test_id" "(Ljava/lang/Object;)Ljava/lang/Object;" in
 
@@ -154,6 +192,16 @@ let test () =
 		assert (Jthrowable.get_localized_message ex = "test")
 	end;
 
+	let arr () = Jarray.(of_obj (to_obj (create_object cls null 1))) in
+
+	for i = 0 to 500 do
+		begin try ignore (Jarray.get_string (arr ()) 0); assert false with Failure _ -> () end;
+		assert (Jarray.get_string_opt (arr ()) 0 = None);
+		begin try ignore (Jarray.get_value (arr ()) 0); assert false with Failure _ -> () end;
+		assert (Jarray.get_value_opt (arr ()) 0 = None);
+		begin try ignore (Jarray.get_array (arr ()) 0); assert false with Failure _ -> () end
+	done;
+
 	assert (instanceof obj cls);
 	assert (not (instanceof obj (find_class "java/lang/String")));
 	assert (sameobject obj obj);
@@ -167,7 +215,7 @@ let test () =
 
 	let test_rec_a s =
 		let s = s ^ "a" in
-		if String.length s >= 64 then s
+		if String.length s >= 120 then s
 		else begin
 			push_string s;
 			call_static_string cls m_rec_b
@@ -196,11 +244,14 @@ let () =
 	if Sys.argv.(0) <> "" then begin
 		Java.init [|
 			"-Djava.class.path=" ^ String.concat ":" jar_files;
-			"-ea"
+			"-ea";
+			"-Xcheck:jni"
 		|];
 		try
-			test ();
-			test_javacaml ()
+			for i = 0 to 10 do
+				test ();
+				test_javacaml ()
+			done
 		with Java.Exception e ->
 			Jthrowable.print_stack_trace e;
 			failwith ""

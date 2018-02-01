@@ -65,12 +65,15 @@ value ocaml_java__sameobject(value a, value b)
 
 value ocaml_java__objectclass(value obj)
 {
-	jclass cls;
+	jclass	cls;
+	value	v;
 
 	if (obj == Java_null_val)
 		caml_failwith("Java.objectclass: null");
 	cls = (*env)->GetObjectClass(env, Java_obj_val(obj));
-	return alloc_java_obj(env, cls);
+	v = alloc_java_obj(env, cls);
+	(*env)->DeleteLocalRef(env, cls);
+	return v;
 }
 
 /*
@@ -79,6 +82,21 @@ value ocaml_java__objectclass(value obj)
 */
 
 static value *java_exception = NULL;
+
+static void raise_java_exception(jthrowable exn)
+{
+	CAMLparam0();
+	CAMLlocal1(thrbl);
+	thrbl = alloc_java_obj(env, exn);
+	(*env)->DeleteLocalRef(env, exn);
+	if (java_exception == NULL)
+	{
+		java_exception = caml_named_value("Java.Exception");
+		if (java_exception == NULL)
+			caml_failwith("camljava not properly linked");
+	}
+	caml_raise_with_arg(*java_exception, thrbl);
+}
 
 // Check if a Java exception has been thrown
 // if there is, raises Java.Exception
@@ -89,13 +107,7 @@ static void check_exceptions(void)
 	exn = (*env)->ExceptionOccurred(env);
 	if (exn == NULL) return ;
 	(*env)->ExceptionClear(env);
-	if (java_exception == NULL)
-	{
-		java_exception = caml_named_value("Java.Exception");
-		if (java_exception == NULL)
-			caml_failwith("camljava not properly linked");
-	}
-	caml_raise_with_arg(*java_exception, alloc_java_obj(env, exn));
+	raise_java_exception(exn);
 }
 
 /*
@@ -108,6 +120,7 @@ static void check_exceptions(void)
 value ocaml_java__find_class(value name)
 {
 	jclass c;
+	value v;
 
 	c = (*env)->FindClass(env, String_val(name));
 	if (c == NULL)
@@ -115,7 +128,9 @@ value ocaml_java__find_class(value name)
 		(*env)->ExceptionClear(env);
 		caml_raise_not_found();
 	}
-	return alloc_java_obj(env, c);
+	v = alloc_java_obj(env, c);
+	(*env)->DeleteLocalRef(env, c);
+	return v;
 }
 
 static value get_method(jobject class_, char const *name, char const *sig)
@@ -258,20 +273,24 @@ value ocaml_java__shutdown(value unit)
 ** -
 ** `arg_stack` represents the argument stack
 ** `local_ref_stack` stores references to objects allocated in `arg_` functions
-**  Local references are deleted after the method as been called
+** `local_ref_cleared` is set to true before calling a method
+** 		so that the next call to `push_local_ref` assumes the stack is empty
 */
 
 #define ARG_STACK_MAX_SIZE	16
 #define LOCALREF_STACK_MAX_SIZE	32
 
 static jvalue arg_stack[ARG_STACK_MAX_SIZE];
-static int arg_count;
+static int arg_count = 0;
 
 // // Local refs
 
 static jobject local_ref_stack[LOCALREF_STACK_MAX_SIZE];
 static int local_ref_count = 0;
+static int local_ref_cleared = 0;
 
+// Clear the local_ref_stack
+// Should be called after calls
 static void clear_local_refs(void)
 {
 	int i;
@@ -279,37 +298,65 @@ static void clear_local_refs(void)
 	for (i = 0; i < local_ref_count; i++)
 		(*env)->DeleteLocalRef(env, local_ref_stack[i]);
 	local_ref_count = 0;
+	local_ref_cleared = 0;
 }
 
+// Adds a local ref onto the stack
 static void push_local_ref(jobject obj)
 {
-	if (local_ref_count >= LOCALREF_STACK_MAX_SIZE)
-		caml_failwith("Local ref stack overflow");
+	if (local_ref_cleared)
+	{
+		local_ref_count = 0;
+		local_ref_cleared = 0;
+	}
 	local_ref_stack[local_ref_count] = obj;
 	local_ref_count++;
+}
+
+// Must be called before calling a java method
+// Reset the arg_stack and mark the local_ref_stack to be cleared later
+static void begin_call(void)
+{
+	local_ref_cleared = 1;
+	arg_count = 0;
 }
 
 /*
 ** ========================================================================== **
 ** Convertions for each types
+** -
+** `conv_of` functions delete local refs they get as parameters
+** `conv_to` functions put the local refs they allocate in the local_ref_stack
 */
 
 static value conv_of_string(jstring str)
 {
+	value v;
+
 	if (IS_NULL(env, str)) caml_failwith("Null string");
-	return jstring_to_cstring(env, str);
+	v = jstring_to_cstring(env, str);
+	(*env)->DeleteLocalRef(env, str);
+	return v;
 }
 
 static value conv_of_value(jobject v)
 {
+	value jvalue;
+
 	if (IS_NULL(env, v)) caml_failwith("Null value");
-	return JVALUE_GET(env, v);
+	jvalue = JVALUE_GET(env, v);
+	(*env)->DeleteLocalRef(env, v);
+	return jvalue;
 }
 
 static value conv_of_array(jarray a)
 {
+	value v;
+
 	if (IS_NULL(env, a)) caml_failwith("Null array");
-	return alloc_java_obj(env, a);
+	v = alloc_java_obj(env, a);
+	(*env)->DeleteLocalRef(env, a);
+	return v;
 }
 
 static value conv_of_string_opt(jstring str)
@@ -318,6 +365,7 @@ static value conv_of_string_opt(jstring str)
 	CAMLlocal1(cstr);
 	if (IS_NULL(env, str)) CAMLreturn(Val_none);
 	cstr = jstring_to_cstring(env, str);
+	(*env)->DeleteLocalRef(env, str);
 	CAMLreturn(copy_some(cstr));
 }
 
@@ -327,7 +375,17 @@ static value conv_of_value_opt(jobject v)
 	CAMLlocal1(jvalue);
 	if (IS_NULL(env, v)) CAMLreturn(Val_none);
 	jvalue = JVALUE_GET(env, v);
+	(*env)->DeleteLocalRef(env, v);
 	CAMLreturn(copy_some(jvalue));
+}
+
+static value conv_of_obj(jobject obj)
+{
+	value v;
+
+	v = alloc_java_obj(env, obj);
+	(*env)->DeleteLocalRef(env, obj);
+	return v;
 }
 
 static jobject conv_to_string(value v)
@@ -360,8 +418,6 @@ static jobject conv_to_value_opt(value opt)
 	return conv_to_value(Some_val(opt));
 }
 
-#define CONV_OF_OBJ(v)		alloc_java_obj(env, v)
-
 // Calls `GEN` for each primitive types:
 //  int, bool, byte, short, int32, long, char, float, double
 // with params:
@@ -387,7 +443,7 @@ static jobject conv_to_value_opt(value opt)
 #define GEN_OBJ(GEN) \
 	GEN(string,		Object,		jobject,	conv_of_string,		l,	conv_to_string) \
 	GEN(string_opt,	Object,		jobject,	conv_of_string_opt,	l,	conv_to_string_opt) \
-	GEN(object,		Object,		jobject,	CONV_OF_OBJ,		l,	Java_obj_val_opt) \
+	GEN(object,		Object,		jobject,	conv_of_obj,		l,	Java_obj_val_opt) \
 	GEN(value,		Object,		jobject,	conv_of_value,		l,	conv_to_value) \
 	GEN(value_opt,	Object,		jobject,	conv_of_value_opt,	l,	conv_to_value_opt) \
 	GEN(array,		Object,		jarray,		conv_of_array,		l,	Java_obj_val)
@@ -407,16 +463,21 @@ value ocaml_java__new(value cls, value meth)
 	jclass		jcls;
 	jmethodID	jmeth;
 	jobject		obj;
+	value		v;
 
 	jcls = Java_obj_val(cls);
 	jmeth = (jmethodID)Nativeint_val(meth);
+	begin_call();
 	obj = (*env)->NewObjectA(env, jcls, jmeth, arg_stack);
+	clear_local_refs();
 	if (obj == NULL)
 	{
 		check_exceptions();
-		caml_failwith("Java.new_");
+		caml_failwith("Java.new_: Allocation failed");
 	}
-	return alloc_java_obj(env, obj);
+	v = alloc_java_obj(env, obj);
+	(*env)->DeleteLocalRef(env, obj);
+	return v;
 }
 
 // Generates call{,_static,_nonvirtual}_* functions
@@ -426,7 +487,7 @@ value ocaml_java__call_##NAME(value obj, value meth)						\
 {																			\
 	if (obj == Java_null_val)												\
 		caml_failwith("Java.call: null");									\
-	arg_count = 0;															\
+	begin_call();															\
 	RESULT (*env)->Call##JNAME##MethodA(env,								\
 		Java_obj_val(obj),													\
 		(jmethodID)Nativeint_val(meth),										\
@@ -437,7 +498,7 @@ value ocaml_java__call_##NAME(value obj, value meth)						\
 }																			\
 value ocaml_java__call_static_##NAME(value cls, value meth)					\
 {																			\
-	arg_count = 0;															\
+	begin_call();															\
 	RESULT (*env)->CallStatic##JNAME##MethodA(env,							\
 		Java_obj_val(cls),													\
 		(jmethodID)Nativeint_val(meth),										\
@@ -451,7 +512,7 @@ value ocaml_java__call_nonvirtual_##NAME(value obj,							\
 {																			\
 	if (obj == Java_null_val)												\
 		caml_failwith("Java.call_nonvirtual: null");						\
-	arg_count = 0;															\
+	begin_call();															\
 	RESULT (*env)->CallNonvirtual##JNAME##MethodA(env,						\
 		Java_obj_val(obj),													\
 		Java_obj_val(cls),													\
@@ -511,6 +572,7 @@ value ocaml_java__write_field_##NAME(value obj, value field, value v)			\
 		Java_obj_val(obj),														\
 		(jfieldID)Nativeint_val(field),											\
 		CONV_TO(v));															\
+	clear_local_refs();															\
 	return Val_unit;															\
 }																				\
 value ocaml_java__write_field_static_##NAME(value cls,					\
@@ -520,6 +582,7 @@ value ocaml_java__write_field_static_##NAME(value cls,					\
 		Java_obj_val(cls),														\
 		(jfieldID)Nativeint_val(field),											\
 		CONV_TO(v));															\
+	clear_local_refs();															\
 	return Val_unit;															\
 }
 
@@ -548,15 +611,22 @@ GEN_PUSH_UNBOXED(double, double, d)
 
 static value new_object_array(jclass cls, jobject obj, jint length)
 {
-	return alloc_java_obj(env,
-			(*env)->NewObjectArray(env, length, cls, obj));
+	jarray const	a = (*env)->NewObjectArray(env, length, cls, obj);
+	value			v;
+
+	v = alloc_java_obj(env, a);
+	(*env)->DeleteLocalRef(env, a);
+	return v;
 }
 
 #define GEN_JARRAY_CREATE_PRIM(NAME, JNAME, ...) \
-value ocaml_java__jarray_create_##NAME(value length)		\
-{															\
-	return alloc_java_obj(env,								\
-		(*env)->New##JNAME##Array(env, Long_val(length)));	\
+value ocaml_java__jarray_create_##NAME(value length)						\
+{																			\
+	jarray const	a = (*env)->New##JNAME##Array(env, Long_val(length));	\
+	value const		v = alloc_java_obj(env, a);								\
+																			\
+	(*env)->DeleteLocalRef(env, a);											\
+	return v;																\
 }
 
 GEN_PRIM(GEN_JARRAY_CREATE_PRIM)
@@ -570,14 +640,22 @@ value ocaml_java__jarray_create_object(value cls, value obj, value length)
 
 value ocaml_java__jarray_create_string(value length)
 {
-	jclass const string_cls = (*env)->FindClass(env, "java/lang/String");
-	return new_object_array(string_cls, NULL, Long_val(length));
+	jclass const	string_cls = (*env)->FindClass(env, "java/lang/String");
+	value			v;
+
+	v = new_object_array(string_cls, NULL, Long_val(length));
+	(*env)->DeleteLocalRef(env, string_cls);
+	return v;
 }
 
 value ocaml_java__jarray_create_value(value length)
 {
-	jclass const string_cls = (*env)->FindClass(env, "juloo/javacaml/Value");
-	return new_object_array(string_cls, NULL, Long_val(length));
+	jclass const	value_cls = (*env)->FindClass(env, "juloo/javacaml/Value");
+	value			v;
+
+	v = new_object_array(value_cls, NULL, Long_val(length));
+	(*env)->DeleteLocalRef(env, value_cls);
+	return v;
 }
 
 value ocaml_java__jarray_length(value array)
@@ -587,8 +665,11 @@ value ocaml_java__jarray_length(value array)
 
 static void	check_out_of_bound_exception(void)
 {
-	if ((*env)->ExceptionOccurred(env) == NULL)
+	jthrowable exn = (*env)->ExceptionOccurred(env);
+
+	if (exn == NULL)
 		return ;
+	(*env)->DeleteLocalRef(env, exn);
 	(*env)->ExceptionClear(env);
 	caml_invalid_argument("index out of bound");
 }
@@ -599,6 +680,7 @@ value ocaml_java__jarray_set_##NAME(value array, value index, value v)		\
 	TYPE const buf = CONV_TO(v);											\
 	(*env)->Set##JNAME##ArrayRegion(env, Java_obj_val(array),				\
 			Long_val(index), 1, &buf);										\
+	clear_local_refs();														\
 	check_out_of_bound_exception();											\
 	return Val_unit;														\
 }
@@ -608,6 +690,7 @@ value ocaml_java__jarray_set_##NAME(value array, value index, value v)		\
 {																			\
 	(*env)->SetObjectArrayElement(env, Java_obj_val(array),					\
 			Long_val(index), CONV_TO(v));									\
+	clear_local_refs();														\
 	check_out_of_bound_exception();											\
 	return Val_unit;														\
 }
@@ -625,7 +708,7 @@ value ocaml_java__jarray_get_##NAME(value array, value index)				\
 #define GEN_JARRAY_GET_OBJ(NAME, JNAME, TYPE, CONV_OF, ...) \
 value ocaml_java__jarray_get_##NAME(value array, value index)				\
 {																			\
-	jobject obj;															\
+	jobject	obj;															\
 																			\
 	obj = (*env)->GetObjectArrayElement(env,								\
 			Java_obj_val(array), Long_val(index));							\
