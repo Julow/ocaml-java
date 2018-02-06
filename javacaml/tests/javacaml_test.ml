@@ -1,5 +1,16 @@
 let print_endline s = ()
 
+exception Ok
+
+let a () = raise Ok
+let b () = a ()
+let c () = try b () with e -> raise e
+let d () = c ()
+let e () = try d () with Not_found -> ()
+let f () = e ()
+let rec g i = if i = 0 then f () else g (i - 1)
+let h () = g 5
+
 let test_obj = object
 	method test = print_endline "OCaml method called"
 	method test_int a b = a + b
@@ -23,4 +34,6 @@ let () =
 	Callback.register "test_throw_new" (fun msg ->
 		let cls = Jclass.find_class "java/lang/Exception" in
 		Jthrowable.throw_new cls msg);
+	Callback.register "test_backtrace" h;
+	Printexc.record_backtrace true;
 	print_endline "OCaml loaded"

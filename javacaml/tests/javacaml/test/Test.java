@@ -186,6 +186,26 @@ public class Test
 			}
 		}).start();
 
+// backtraces
+		try
+		{
+			Caml.function(Caml.getCallback("test_backtrace"));
+			Caml.argUnit();
+			Caml.callUnit();
+		}
+		catch (CamlException e)
+		{
+			StackTraceElement[] stack = e.getStackTrace();
+			int[] line_nums = new int[]{ 5, 6, 7, 7, 8, 9 };
+			for (int i = 0; i < 5; i++)
+			{
+				assert stack[i].getClassName().equals("<OCaml>");
+				assert stack[i].getMethodName().equals("<OCaml>");
+				assert stack[i].getFileName().equals("javacaml_test.ml");
+				assert stack[i].getLineNumber() == line_nums[i];
+			}
+		}
+
 		System.out.println("Javacaml Ok");
 	}
 

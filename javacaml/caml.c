@@ -15,13 +15,16 @@ static jclass
 	CallbackNotFoundException,
 	Value,
 	CamlException,
+	StackTraceElement,
 	InvalidMethodIdException,
 	ArgumentStackOverflowException,
 	ThreadException;
 
 static jmethodID
 	Callback_init,
-	Value_init;
+	Value_init,
+	CamlException_init,
+	StackTraceElement_init;
 
 static jfieldID
 	Callback_closure,
@@ -87,18 +90,70 @@ static void empty_stack(void)
 		Store_field(stack, i, Val_unit);
 }
 
+// Alloc an array of StackTraceElement
+// `locations` is an OCaml array of tuple (file_name, line_number)
+static jobjectArray alloc_stack_trace_elements(JNIEnv *env, value locations)
+{
+	jstring			unknown_loc;
+	jobjectArray	elements;
+	int const		loc_count = Wosize_val(locations);
+	int				i;
+	value			loc;
+	jstring			file_name;
+	jobject			elem;
+
+	unknown_loc = (*env)->NewStringUTF(env, "<OCaml>");
+	elements = (*env)->NewObjectArray(env, loc_count, StackTraceElement, NULL);
+	for (i = 0; i < loc_count; i++)
+	{
+		loc = Field(locations, i);
+		file_name = (*env)->NewStringUTF(env, String_val(Field(loc, 0)));
+		elem = (*env)->NewObject(env, StackTraceElement, StackTraceElement_init,
+				unknown_loc, unknown_loc, file_name, Long_val(Field(loc, 1)));
+		(*env)->SetObjectArrayElement(env, elements, i, elem);
+		(*env)->DeleteLocalRef(env, file_name);
+		(*env)->DeleteLocalRef(env, elem);
+	}
+	(*env)->DeleteLocalRef(env, unknown_loc);
+	return elements;
+}
+
+// Returns an array of tuple (file_name, line_number)
+static value get_ocaml_backtrace()
+{
+	static value	*get_backtrace = NULL;
+
+	if (get_backtrace == NULL)
+	{
+		get_backtrace = caml_named_value("Java.get_ocaml_backtraces");
+		if (get_backtrace == NULL)
+			return Atom(0); // Don't fail, just return an empty array
+	}
+	return caml_callback(*get_backtrace, Val_unit);
+}
+
 // Throw a CamlException in reaction of `exn`
 // If ExceptionOccurred is set, let it through and do not throw a CamlException
 static void throw_caml_exception(JNIEnv *env, value exn)
 {
-	char		*exn_message;
+	char			*_exn_msg;
+	jstring			exn_msg;
+	jthrowable		java_exn;
+	jobjectArray	elements;
 
 	if ((*env)->ExceptionOccurred(env) != NULL)
 		return ;
 	// function from caml/printexc.h
-	exn_message = caml_format_exception(exn);
-	(*env)->ThrowNew(env, CamlException, exn_message);
-	caml_stat_free(exn_message);
+	_exn_msg = caml_format_exception(exn);
+	exn_msg = (*env)->NewStringUTF(env, _exn_msg);
+	caml_stat_free(_exn_msg);
+	elements = alloc_stack_trace_elements(env, get_ocaml_backtrace());
+	java_exn = (*env)->NewObject(env, CamlException, CamlException_init,
+			exn_msg, elements);
+	(*env)->Throw(env, java_exn);
+	(*env)->DeleteLocalRef(env, exn_msg);
+	(*env)->DeleteLocalRef(env, elements);
+	(*env)->DeleteLocalRef(env, java_exn);
 }
 
 static void init_arg_stack(void)
@@ -313,6 +368,9 @@ static int init_classes(JNIEnv *env)
 	I(Value, "(J)V");
 	F(Value, value, "J");
 	C("juloo/javacaml/", CamlException);
+	I(CamlException, "(Ljava/lang/String;[Ljava/lang/StackTraceElement;)V");
+	C("java/lang/", StackTraceElement);
+	I(StackTraceElement, "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)V");
 	C("juloo/javacaml/", InvalidMethodIdException);
 	C("juloo/javacaml/", ArgumentStackOverflowException);
 	C("juloo/javacaml/", ThreadException);

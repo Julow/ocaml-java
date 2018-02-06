@@ -24,6 +24,16 @@ let init opts =
 let null : obj = (Obj.magic 0)
 
 let () =
+	(* Used by javacaml *)
+	Callback.register "Java.get_ocaml_backtraces" Printexc.(fun () ->
+		match backtrace_slots (get_raw_backtrace ()) with
+		| Some bt	->
+			Array.map (fun slot ->
+				match Slot.location slot with
+				| Some loc	-> (loc.filename, loc.line_number)
+				| None		-> ("Unknown location", -1)) bt
+		| None		-> [||]
+	);
 	Callback.register_exception "Java.Exception" (Exception (Obj.magic 0))
 
 external instanceof : obj -> jclass -> bool

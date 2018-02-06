@@ -5,8 +5,18 @@ package juloo.javacaml;
  */
 public class CamlException extends RuntimeException
 {
-	public CamlException(String msg)
+	public CamlException(String msg, StackTraceElement[] caml_stack)
 	{
 		super("Uncaught OCaml exception: `" + msg + "`");
+		setStackTrace(concat_stacks(caml_stack, getStackTrace()));
+	}
+
+	static StackTraceElement[] concat_stacks(StackTraceElement[] a,
+			StackTraceElement[] b)
+	{
+		StackTraceElement[] c = new StackTraceElement[a.length + b.length];
+		System.arraycopy(a, 0, c, 0, a.length);
+		System.arraycopy(b, 0, c, a.length, b.length);
+		return c;
 	}
 }
