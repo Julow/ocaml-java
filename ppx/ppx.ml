@@ -51,39 +51,59 @@ let unwrap_core_type =
 	in
 
 	function
-	| Ptyp_constr ({ txt = Lident "int" }, [])		-> t "I" "int"
-	| Ptyp_constr ({ txt = Lident "bool" }, [])		-> t "Z" "bool"
-	| Ptyp_constr ({ txt = Lident "byte" }, [])		-> t "B" "byte"
-	| Ptyp_constr ({ txt = Lident "short" }, [])	-> t "S" "short"
-	| Ptyp_constr ({ txt = Lident "int32" }, [])	-> t "I" "int32"
-	| Ptyp_constr ({ txt = Lident "long" }, [])		-> t "J" "long"
-	| Ptyp_constr ({ txt = Lident "char" }, [])		-> t "C" "char"
-	| Ptyp_constr ({ txt = Lident "float" }, [])	-> t "F" "float"
-	| Ptyp_constr ({ txt = Lident "double" }, [])	-> t "D" "double"
-	| Ptyp_constr ({ txt = Lident "string" }, [])	-> t "Ljava/lang/String;" "string"
-	| Ptyp_constr ({ txt = Lident "option" }, [
-		{ ptyp_desc = Ptyp_constr ({ txt = Lident "string" }, []) } ]) ->
-		t "Ljava/lang/String;" "string_opt"
-	| _							-> t "Ljuloo/javacaml/Value;" "value"
+	| [%type: unit] as t			->
+		let push_func _ = Location.raise_errorf ~loc:t.ptyp_loc
+			"unit can only be a return type"
+		and call_func arg = mk_call_dot_s ("Java", "call_void") [ "obj"; arg ] in
+		{ sigt = "V"; push_func; call_func }
+	| [%type: int]					-> t "I" "int"
+	| [%type: bool]					-> t "Z" "bool"
+	| [%type: byte]					-> t "B" "byte"
+	| [%type: short]				-> t "S" "short"
+	| [%type: int32]				-> t "I" "int32"
+	| [%type: long]					-> t "J" "long"
+	| [%type: char]					-> t "C" "char"
+	| [%type: float]				-> t "F" "float"
+	| [%type: double]				-> t "D" "double"
+	| [%type: string]				-> t "Ljava/lang/String;" "string"
+	| [%type: string option]		-> t "Ljava/lang/String;" "string_opt"
+	| [%type: [%t? _] value]		-> t "Ljuloo/javacaml/Value;" "value"
+	| [%type: [%t? _] value option]	-> t "Ljuloo/javacaml/Value;" "value_opt"
+	| [%type: Java.obj]				-> t "Ljava/lang/Object;" "object"
+	| { ptyp_loc = loc } -> Location.raise_errorf ~loc "Unsupported type"
 
 let rec unwrap_method_type =
 	function
-	| Ptyp_arrow (Nolabel, { ptyp_desc }, { ptyp_desc = Ptyp_arrow _ as rhs })	->
-		let args, ret = unwrap_method_type rhs in
-		unwrap_core_type ptyp_desc :: args, ret
-	| Ptyp_arrow (Nolabel, { ptyp_desc = lhs }, { ptyp_desc = rhs })	->
-		[ unwrap_core_type lhs ], unwrap_core_type rhs
+	| [%type: [%t? lhs] -> [%t? rhs]]	->
+		let args, ret = match rhs with
+			| [%type: [%t? _] -> [%t? _]]	-> unwrap_method_type rhs
+			| _								-> [], unwrap_core_type rhs
+		in
+		unwrap_core_type lhs :: args, ret
 	| t								-> [], unwrap_core_type t
 
 let unwrap_class_field =
 	function
+	| { pcf_desc = Pcf_method (_, _, Cfk_virtual _); pcf_loc = loc } ->
+		Location.raise_errorf ~loc "Virtual method unsupported"
+	| { pcf_desc = Pcf_method (_, _, Cfk_concrete (Override, _));
+			pcf_loc = loc } ->
+		Location.raise_errorf ~loc "Override method unsupported"
+	| { pcf_desc = Pcf_method (_, Private, _); pcf_loc = loc } ->
+		Location.raise_errorf ~loc "Private method unsupported"
 	| { pcf_desc = Pcf_method ({ txt = name }, Public, Cfk_concrete (Fresh,
 			{ pexp_desc = Pexp_poly (
 				{ pexp_desc = Pexp_constant (Pconst_string (java_name, None)) },
-				Some { ptyp_desc }
+				Some mtype
 			) })) }	->
-		`Method (name, java_name, unwrap_method_type ptyp_desc)
-	| _ -> raise (Invalid_argument "unwrap_class_field")
+		`Method (name, java_name, unwrap_method_type mtype)
+	| { pcf_desc = Pcf_method (_, _, Cfk_concrete (_, { pexp_desc =
+			Pexp_poly ({ pexp_desc = _; pexp_loc = loc }, _) })) } ->
+		Location.raise_errorf ~loc "Expecting Java method name"
+	| { pcf_desc = Pcf_method (_, _, Cfk_concrete (_, { pexp_loc = loc })) } ->
+		Location.raise_errorf ~loc "Expecting method signature"
+	| { pcf_loc = loc } ->
+		Location.raise_errorf ~loc "Unsupported"
 
 (** Returns the tuple (class name, java class name, fields)
 		where fields is `Method (meth_name, java_name, (arg types, ret type))
@@ -97,7 +117,15 @@ let unwrap_class =
 					pcstr_self = { ppat_desc = Ppat_any };
 					pcstr_fields } }) } } ->
 		(name, java_name, List.map unwrap_class_field pcstr_fields)
-	| _ -> raise (Invalid_argument "unwrap_class")
+	| { pci_expr = { pcl_desc = Pcl_fun (_, _, _, { pcl_desc = Pcl_structure {
+				pcstr_self = { ppat_desc; ppat_loc = loc }
+			}})} } when ppat_desc <> Ppat_any ->
+		Location.raise_errorf ~loc "self is not allowed"
+	| { pci_expr = { pcl_desc = Pcl_fun (_, _, { ppat_desc =
+			Ppat_constant (Pconst_string _) }, { pcl_loc = loc }) } } ->
+		Location.raise_errorf ~loc "Expecting object"
+	| { pci_loc = loc }		->
+		Location.raise_errorf ~loc "Expecting Java class path"
 
 (* Gen *)
 
@@ -169,7 +197,7 @@ let structure_item mapper =
 		]), _) }	->
 		let cls = unwrap_class cls in
 		Str.module_ (gen_class cls)
-	| item			-> item
+	| item			-> default_mapper.structure_item mapper item
 
 let mapper _ = { default_mapper with structure_item }
 
