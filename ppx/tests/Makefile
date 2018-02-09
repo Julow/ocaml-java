@@ -10,7 +10,7 @@ run: libs
 		echo \# $$f; \
 		ocamlfind ppx_tools/rewriter $(PPX) inp/$$f; \
 	done > regr_out
-	diff regr_out regr_ref > regr_diff
+	diff regr_ref regr_out > regr_diff
 
 libs:
 	make -C $(OCAMLJAVA_DIR)

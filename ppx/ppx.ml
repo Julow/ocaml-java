@@ -12,9 +12,27 @@ let java_class_fmt = String.map (function '.' -> '/' | c -> c)
 
 let arg_name = Printf.sprintf "x%d"
 
+(* - *)
+
+(* Names of classes saw until now *)
+let known_classes = Hashtbl.create 10
+
+let add_known_class (name, jname, _) =
+    Hashtbl.add known_classes name jname
+
 (* AST Helpers *)
 
 let mk_loc txt = { txt; loc = !default_loc }
+
+let mk_ident =
+	let rec ident acc =
+		function
+		| l :: r	-> ident (Ldot (acc, l)) r
+		| []		-> acc
+	in
+	function
+	| l :: r	-> Exp.ident (mk_loc (ident (Lident l) r))
+	| []		-> assert false
 
 let mk_call ident args = Exp.apply (Exp.ident (mk_loc ident)) args
 let mk_call_dot (m, i) args =
@@ -49,13 +67,13 @@ let unwrap_core_type =
 		and call_func arg = mk_call_dot_s ("Java", "call_" ^ n) [ "obj"; arg ] in
 		{ sigt; push_func; call_func }
 	in
-
 	function
 	| [%type: unit] as t			->
 		let push_func _ = Location.raise_errorf ~loc:t.ptyp_loc
 			"unit can only be a return type"
 		and call_func arg = mk_call_dot_s ("Java", "call_void") [ "obj"; arg ] in
 		{ sigt = "V"; push_func; call_func }
+
 	| [%type: int]					-> t "I" "int"
 	| [%type: bool]					-> t "Z" "bool"
 	| [%type: byte]					-> t "B" "byte"
@@ -70,6 +88,25 @@ let unwrap_core_type =
 	| [%type: [%t? _] value]		-> t "Ljuloo/javacaml/Value;" "value"
 	| [%type: [%t? _] value option]	-> t "Ljuloo/javacaml/Value;" "value_opt"
 	| [%type: Java.obj]				-> t "Ljava/lang/Object;" "object"
+
+	| [%type: [%t? { ptyp_desc = Ptyp_constr ({ txt = Lident name }, []) }]]
+			when Hashtbl.mem known_classes name ->
+		let cn = java_class_fmt (Hashtbl.find known_classes name) in
+		let mn = module_name name in
+
+		let push_func arg =
+			let arg = mk_ident [ arg ]
+			and to_obj = mk_ident [ mn; "to_obj" ] in
+			[%expr Java.push_object ([%e to_obj] [%e arg])]
+
+		and call_func arg =
+			[%expr let r = Java.call_object obj [%e mk_ident [ arg ]] in
+				if r == Java.null then failwith "null obj"
+				else [%e mk_ident [ mn; "of_obj_unsafe" ]] r]
+		in
+
+		{ sigt = "L" ^ cn ^ ";"; push_func; call_func }
+
 	| { ptyp_loc = loc } -> Location.raise_errorf ~loc "Unsupported type"
 
 let rec unwrap_method_type =
@@ -96,7 +133,7 @@ let unwrap_class_field =
 				{ pexp_desc = Pexp_constant (Pconst_string (java_name, None)) },
 				Some mtype
 			) })) }	->
-		`Method (name, java_name, unwrap_method_type mtype)
+		`Method (name, java_name, lazy (unwrap_method_type mtype))
 	| { pcf_desc = Pcf_method (_, _, Cfk_concrete (_, { pexp_desc =
 			Pexp_poly ({ pexp_desc = _; pexp_loc = loc }, _) })) } ->
 		Location.raise_errorf ~loc "Expecting Java method name"
@@ -106,7 +143,10 @@ let unwrap_class_field =
 		Location.raise_errorf ~loc "Unsupported"
 
 (** Returns the tuple (class name, java class name, fields)
-		where fields is `Method (meth_name, java_name, (arg types, ret type))
+		where fields is
+			[`Method (meth_name, java_name, lazy (args, ret types))]
+		Oups: Types are `lazy` so that classes are added to `known_classes`
+			before parsing them. errors may be raised later...
 	Raises `Invalid_argument` if the class is not formatted correctly *)
 let unwrap_class =
 	function
@@ -147,7 +187,8 @@ let gen_class (class_name, java_name, fields) =
 	(* Methods *)
 	let items = List.fold_right (fun field items ->
 		match field with
-		| `Method (name, jname, (args, ret as sigt))	->
+		| `Method (name, jname, sigt)	->
+			let args, ret as sigt = Lazy.force sigt in
 			let mid = add_global (`Method (jname, sigt)) in
 			[%stri let [%p Pat.var (mk_loc name)] =
 				[%e (gen_func ("obj" :: List.mapi (fun i _ -> arg_name i) args) (
@@ -196,6 +237,7 @@ let structure_item mapper =
 			{ pstr_desc = Pstr_class [ cls ] }
 		]), _) }	->
 		let cls = unwrap_class cls in
+		add_known_class cls;
 		Str.module_ (gen_class cls)
 	| item			-> default_mapper.structure_item mapper item
 

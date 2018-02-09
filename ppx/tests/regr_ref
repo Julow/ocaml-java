@@ -32,6 +32,19 @@
 [%%ocaml.error ;;"Virtual method unsupported"
   ;;""]
 # ok.ml
+module A =
+  struct
+    type t
+    let __cls = Jclass.find_class "a/A"
+    external to_obj : t -> Java.obj = "%identity"
+    external of_obj_unsafe : Java.obj -> t = "%identity"
+    let of_obj obj =
+      if Java.instanceof obj __cls
+      then of_obj_unsafe obj
+      else failwith "of_obj"
+    let __0 = Jclass.get_meth __cls "a" "()V"
+    let a obj = Java.call_void obj __0
+  end
 module Test =
   struct
     type t
@@ -42,13 +55,17 @@ module Test =
       if Java.instanceof obj __cls
       then of_obj_unsafe obj
       else failwith "of_obj"
-    let __0 =
+    let __0 = Jclass.get_meth __cls "d" "(Ltest/Test;)Ltest/Test;"
+    let __1 =
       Jclass.get_meth __cls "c"
         "(IZBSIJCFDLjava/lang/String;Ljava/lang/String;Ljuloo/javacaml/Value;Ljuloo/javacaml/Value;)V"
-    let __1 = Jclass.get_meth __cls "b" "()V"
-    let __2 = Jclass.get_meth __cls "a" "()I"
-    let a obj = Java.call_int obj __2
-    let b obj = Java.call_void obj __1
+    let __2 = Jclass.get_meth __cls "b" "()V"
+    let __3 = Jclass.get_meth __cls "a" "(La/A;)La/A;"
+    let a obj x0 =
+      Java.push_object (A.to_obj x0);
+      (let r = Java.call_object obj __3 in
+       if r == Java.null then failwith "null obj" else A.of_obj_unsafe r)
+    let b obj = Java.call_void obj __2
     let c obj x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 =
       Java.push_int x0;
       Java.push_bool x1;
@@ -63,5 +80,9 @@ module Test =
       Java.push_string_opt x10;
       Java.push_value x11;
       Java.push_value_opt x12;
-      Java.call_void obj __0
+      Java.call_void obj __1
+    let d obj x0 =
+      Java.push_object (Test.to_obj x0);
+      (let r = Java.call_object obj __0 in
+       if r == Java.null then failwith "null obj" else Test.of_obj_unsafe r)
   end
