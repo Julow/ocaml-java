@@ -1,0 +1,67 @@
+# error_2_class_param.ml
+[%%ocaml.error ;;"Expecting object"
+  ;;""]
+# error_missing_classpath.ml
+[%%ocaml.error ;;"Expecting Java class path"
+  ;;""]
+# error_missing_meth_type.ml
+[%%ocaml.error ;;"Expecting Java method name"
+  ;;""]
+# error_not_classpath.ml
+[%%ocaml.error ;;"Expecting Java class path"
+  ;;""]
+# error_not_meth_name.ml
+[%%ocaml.error ;;"Expecting Java method name"
+  ;;""]
+# error_override.ml
+[%%ocaml.error ;;"Override method unsupported"
+  ;;""]
+# error_private.ml
+[%%ocaml.error ;;"Private method unsupported"
+  ;;""]
+# error_self.ml
+[%%ocaml.error ;;"self is not allowed"
+  ;;""]
+# error_unit_arg.ml
+[%%ocaml.error ;;"unit can only be a return type"
+  ;;""]
+# error_unsupported_type.ml
+[%%ocaml.error ;;"Unsupported type"
+  ;;""]
+# error_virtual.ml
+[%%ocaml.error ;;"Virtual method unsupported"
+  ;;""]
+# ok.ml
+module Test =
+  struct
+    type t
+    let __cls = Jclass.find_class "test/Test"
+    external to_obj : t -> Java.obj = "%identity"
+    external of_obj_unsafe : Java.obj -> t = "%identity"
+    let of_obj obj =
+      if Java.instanceof obj __cls
+      then of_obj_unsafe obj
+      else failwith "of_obj"
+    let __0 =
+      Jclass.get_meth __cls "c"
+        "(IZBSIJCFDLjava/lang/String;Ljava/lang/String;Ljuloo/javacaml/Value;Ljuloo/javacaml/Value;)V"
+    let __1 = Jclass.get_meth __cls "b" "()V"
+    let __2 = Jclass.get_meth __cls "a" "()I"
+    let a obj = Java.call_int obj __2
+    let b obj = Java.call_void obj __1
+    let c obj x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 =
+      Java.push_int x0;
+      Java.push_bool x1;
+      Java.push_byte x2;
+      Java.push_short x3;
+      Java.push_int32 x4;
+      Java.push_long x5;
+      Java.push_char x6;
+      Java.push_float x7;
+      Java.push_double x8;
+      Java.push_string x9;
+      Java.push_string_opt x10;
+      Java.push_value x11;
+      Java.push_value_opt x12;
+      Java.call_void obj __0
+  end
