@@ -67,6 +67,18 @@ let unwrap_core_type =
 		and call_func arg = mk_call_dot_s ("Java", "call_" ^ n) [ "obj"; arg ] in
 		{ sigt; push_func; call_func }
 	in
+
+	let t_class name push_func call_func =
+		let cn = java_class_fmt (Hashtbl.find known_classes name) in
+		let mn = module_name name in
+		let push_func arg =
+			push_func (mk_ident [ arg ]) (mk_ident [ mn; "to_obj" ])
+		and call_func arg =
+			call_func (mk_ident [ arg ]) (mk_ident [ mn; "of_obj_unsafe" ])
+		in
+		{ sigt = "L" ^ cn ^ ";"; push_func; call_func }
+	in
+
 	function
 	| [%type: unit] as t			->
 		let push_func _ = Location.raise_errorf ~loc:t.ptyp_loc
@@ -91,21 +103,26 @@ let unwrap_core_type =
 
 	| [%type: [%t? { ptyp_desc = Ptyp_constr ({ txt = Lident name }, []) }]]
 			when Hashtbl.mem known_classes name ->
-		let cn = java_class_fmt (Hashtbl.find known_classes name) in
-		let mn = module_name name in
-
-		let push_func arg =
-			let arg = mk_ident [ arg ]
-			and to_obj = mk_ident [ mn; "to_obj" ] in
+		t_class name (fun arg to_obj ->
 			[%expr Java.push_object ([%e to_obj] [%e arg])]
-
-		and call_func arg =
-			[%expr let r = Java.call_object obj [%e mk_ident [ arg ]] in
+		) (fun arg of_obj_unsafe ->
+			[%expr let r = Java.call_object obj [%e arg] in
 				if r == Java.null then failwith "null obj"
-				else [%e mk_ident [ mn; "of_obj_unsafe" ]] r]
-		in
+				else [%e of_obj_unsafe] r]
+		)
 
-		{ sigt = "L" ^ cn ^ ";"; push_func; call_func }
+	| [%type: [%t? { ptyp_desc = Ptyp_constr ({ txt = Lident name }, []) }] option]
+			when Hashtbl.mem known_classes name ->
+		t_class name (fun arg to_obj ->
+			[%expr Java.push_object (
+				match [%e arg] with
+				| Some arg	-> [%e to_obj] arg
+				| None		-> Java.null)]
+		) (fun arg of_obj_unsafe ->
+			[%expr let r = Java.call_object obj [%e arg] in
+				if r == Java.null then None
+				else Some ([%e of_obj_unsafe] r)]
+		)
 
 	| { ptyp_loc = loc } -> Location.raise_errorf ~loc "Unsupported type"
 

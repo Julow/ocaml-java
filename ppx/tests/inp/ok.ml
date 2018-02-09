@@ -13,5 +13,6 @@ object
 		-> (a * b -> c) value -> (a b c * [> `D of e]) value option
 		-> unit = "c"
 	method d : test -> test = "d"
+	method e : test option -> test option = "e"
 
 end
