@@ -1,6 +1,15 @@
 # error_2_class_param.ml
 [%%ocaml.error ;;"Expecting object"
   ;;""]
+# error_field_missing_type.ml
+[%%ocaml.error ;;"Expecting field type"
+  ;;""]
+# error_field_unit.ml
+[%%ocaml.error ;;"unit can only be a return type"
+  ;;""]
+# error_field_unsupported_type.ml
+[%%ocaml.error ;;"Unsupported type"
+  ;;""]
 # error_missing_classpath.ml
 [%%ocaml.error ;;"Expecting Java class path"
   ;;""]
@@ -14,10 +23,10 @@
 [%%ocaml.error ;;"Expecting Java method name"
   ;;""]
 # error_override.ml
-[%%ocaml.error ;;"Override method unsupported"
+[%%ocaml.error ;;"Override method"
   ;;""]
 # error_private.ml
-[%%ocaml.error ;;"Private method unsupported"
+[%%ocaml.error ;;"Private method"
   ;;""]
 # error_self.ml
 [%%ocaml.error ;;"self is not allowed"
@@ -29,7 +38,7 @@
 [%%ocaml.error ;;"Unsupported type"
   ;;""]
 # error_virtual.ml
-[%%ocaml.error ;;"Virtual method unsupported"
+[%%ocaml.error ;;"Virtual method"
   ;;""]
 # ok.ml
 module A =
@@ -62,6 +71,13 @@ module Test =
         "(IZBSIJCFDLjava/lang/String;Ljava/lang/String;Ljuloo/javacaml/Value;Ljuloo/javacaml/Value;)V"
     let __3 = Jclass.get_meth __cls "b" "()V"
     let __4 = Jclass.get_meth __cls "a" "(La/A;)La/A;"
+    let __5 = Jclass.get_field __cls "b" "Ljuloo/javacaml/Value;"
+    let __6 = Jclass.get_field __cls "a" "La/A;"
+    let get'a obj =
+      let r = Java.read_field_object obj __6 in
+      if r == Java.null then failwith "null obj" else A.of_obj_unsafe r
+    let get'b obj = Java.read_field_value_opt obj __5
+    let set'b obj v = Java.write_field_value_opt obj __5 v
     let a obj x0 =
       Java.push_object (A.to_obj x0);
       (let r = Java.call_object obj __4 in

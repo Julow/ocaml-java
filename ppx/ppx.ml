@@ -49,10 +49,14 @@ let rec mk_sequence =
 
 (* Type info *)
 
+(* The variable `obj` is expected to be defined,
+	`write_field` expects the variable `v` to be defined *)
 type type_info = {
 	sigt : string;
 	push_func : string -> expression;
-	call_func : string -> expression
+	call_func : string -> expression;
+	read_field : string -> expression;
+	write_field : string -> expression
 }
 
 let jni_meth_sigt (args, ret) =
@@ -64,27 +68,38 @@ let jni_meth_sigt (args, ret) =
 let unwrap_core_type =
 	let t sigt n =
 		let push_func arg = mk_call_dot_s ("Java", "push_" ^ n) [ arg ]
-		and call_func arg = mk_call_dot_s ("Java", "call_" ^ n) [ "obj"; arg ] in
-		{ sigt; push_func; call_func }
+		and call_func mid = mk_call_dot_s ("Java", "call_" ^ n) [ "obj"; mid ]
+		and read_field fid =
+			mk_call_dot_s ("Java", "read_field_" ^ n) [ "obj"; fid ]
+		and write_field fid =
+			mk_call_dot_s ("Java", "write_field_" ^ n) [ "obj"; fid; "v" ]
+		in
+		{ sigt; push_func; call_func; read_field; write_field }
 	in
 
-	let t_class name push_func call_func =
+	let t_class name conv_to conv_of =
 		let cn = java_class_fmt (Hashtbl.find known_classes name) in
-		let mn = module_name name in
 		let push_func arg =
-			push_func (mk_ident [ arg ]) (mk_ident [ mn; "to_obj" ])
+			[%expr Java.push_object ([%e conv_to (mk_ident [ arg ])])]
 		and call_func arg =
-			call_func (mk_ident [ arg ]) (mk_ident [ mn; "of_obj_unsafe" ])
+			conv_of [%expr Java.call_object obj [%e mk_ident [ arg ]]]
+		and read_field arg =
+			conv_of [%expr Java.read_field_object obj [%e mk_ident [ arg ]]]
+		and write_field arg =
+			[%expr Java.write_field_object ([%e conv_to (mk_ident [ arg ])])]
 		in
-		{ sigt = "L" ^ cn ^ ";"; push_func; call_func }
+		{ sigt = "L" ^ cn ^ ";";
+			push_func; call_func;
+			read_field; write_field }
 	in
 
 	function
 	| [%type: unit] as t			->
-		let push_func _ = Location.raise_errorf ~loc:t.ptyp_loc
+		let disabled _ = Location.raise_errorf ~loc:t.ptyp_loc
 			"unit can only be a return type"
-		and call_func arg = mk_call_dot_s ("Java", "call_void") [ "obj"; arg ] in
-		{ sigt = "V"; push_func; call_func }
+		and call_func mid = mk_call_dot_s ("Java", "call_void") [ "obj"; mid ] in
+		{ sigt = "V"; push_func = disabled; call_func;
+			read_field = disabled; write_field = disabled }
 
 	| [%type: int]					-> t "I" "int"
 	| [%type: bool]					-> t "Z" "bool"
@@ -103,26 +118,23 @@ let unwrap_core_type =
 
 	| [%type: [%t? { ptyp_desc = Ptyp_constr ({ txt = Lident name }, []) }]]
 			when Hashtbl.mem known_classes name ->
-		t_class name (fun arg to_obj ->
-			[%expr Java.push_object ([%e to_obj] [%e arg])]
-		) (fun arg of_obj_unsafe ->
-			[%expr let r = Java.call_object obj [%e arg] in
+		let mn = module_name name in
+		t_class name
+			(fun v -> [%expr [%e mk_ident [ mn; "to_obj" ]] [%e v]])
+			(fun obj -> [%expr let r = [%e obj] in
 				if r == Java.null then failwith "null obj"
-				else [%e of_obj_unsafe] r]
-		)
+				else [%e mk_ident [ mn; "of_obj_unsafe" ]] r])
 
 	| [%type: [%t? { ptyp_desc = Ptyp_constr ({ txt = Lident name }, []) }] option]
 			when Hashtbl.mem known_classes name ->
-		t_class name (fun arg to_obj ->
-			[%expr Java.push_object (
-				match [%e arg] with
-				| Some arg	-> [%e to_obj] arg
-				| None		-> Java.null)]
-		) (fun arg of_obj_unsafe ->
-			[%expr let r = Java.call_object obj [%e arg] in
+		let mn = module_name name in
+		t_class name
+			(fun v -> [%expr match [%e v] with
+				| Some arg	-> [%e mk_ident [ mn; "to_obj" ]] arg
+				| None		-> Java.null])
+			(fun obj -> [%expr let r = [%e obj] in
 				if r == Java.null then None
-				else Some ([%e of_obj_unsafe] r)]
-		)
+				else Some ([%e mk_ident [ mn; "of_obj_unsafe" ]] r)])
 
 	| { ptyp_loc = loc } -> Location.raise_errorf ~loc "Unsupported type"
 
@@ -138,26 +150,45 @@ let rec unwrap_method_type =
 
 let unwrap_class_field =
 	function
-	| { pcf_desc = Pcf_method (_, _, Cfk_virtual _); pcf_loc = loc } ->
-		Location.raise_errorf ~loc "Virtual method unsupported"
-	| { pcf_desc = Pcf_method (_, _, Cfk_concrete (Override, _));
-			pcf_loc = loc } ->
-		Location.raise_errorf ~loc "Override method unsupported"
-	| { pcf_desc = Pcf_method (_, Private, _); pcf_loc = loc } ->
-		Location.raise_errorf ~loc "Private method unsupported"
-	| { pcf_desc = Pcf_method ({ txt = name }, Public, Cfk_concrete (Fresh,
-			{ pexp_desc = Pexp_poly (
-				{ pexp_desc = Pexp_constant (Pconst_string (java_name, None)) },
-				Some mtype
-			) })) }	->
-		`Method (name, java_name, lazy (unwrap_method_type mtype))
-	| { pcf_desc = Pcf_method (_, _, Cfk_concrete (_, { pexp_desc =
-			Pexp_poly ({ pexp_desc = _; pexp_loc = loc }, _) })) } ->
-		Location.raise_errorf ~loc "Expecting Java method name"
-	| { pcf_desc = Pcf_method (_, _, Cfk_concrete (_, { pexp_loc = loc })) } ->
-		Location.raise_errorf ~loc "Expecting method signature"
-	| { pcf_loc = loc } ->
-		Location.raise_errorf ~loc "Unsupported"
+	| { pcf_desc = Pcf_method ({ txt = name }, visi, impl); pcf_loc = loc }	->
+		begin match impl with
+		| _ when visi <> Public				->
+			Location.raise_errorf ~loc "Private method"
+		| Cfk_concrete (Fresh, { pexp_desc = Pexp_poly (
+				{ pexp_desc = Pexp_constant (Pconst_string (jname, None)) },
+				Some mtype) })				->
+			`Method (name, jname, lazy (unwrap_method_type mtype))
+		| Cfk_concrete (Fresh, { pexp_desc = Pexp_poly (
+				{ pexp_loc = loc }, _) })	->
+			Location.raise_errorf ~loc "Expecting Java method name"
+		| Cfk_concrete (Fresh,
+				{ pexp_loc = loc })			->
+			Location.raise_errorf ~loc "Expecting method signature"
+		| Cfk_virtual _						->
+			Location.raise_errorf ~loc "Virtual method"
+		| Cfk_concrete (Override, _)		->
+			Location.raise_errorf ~loc "Override method"
+		end
+
+	| { pcf_desc = Pcf_val ({ txt = name }, mut, impl); pcf_loc = loc }		->
+		begin match impl with
+		| Cfk_concrete (Fresh, { pexp_desc = Pexp_constraint (
+				{ pexp_desc = Pexp_constant (Pconst_string (jname, None)) },
+				ftype ) })					->
+			`Field (name, jname, lazy (unwrap_core_type ftype), mut = Mutable)
+		| Cfk_concrete (Fresh, { pexp_desc = Pexp_constraint (
+				{ pexp_loc = loc }, _ ) })	->
+			Location.raise_errorf ~loc "Expecting Java field name"
+		| Cfk_concrete (Fresh,
+				{ pexp_loc = loc})			->
+			Location.raise_errorf ~loc "Expecting field type"
+		| Cfk_virtual _						->
+			Location.raise_errorf ~loc "Virtual field"
+		| Cfk_concrete (Override, _)		->
+			Location.raise_errorf ~loc "Override field"
+		end
+
+	| { pcf_loc = loc } -> Location.raise_errorf ~loc "Unsupported"
 
 (** Returns the tuple (class name, java class name, fields)
 		where fields is
@@ -208,11 +239,23 @@ let gen_class (class_name, java_name, fields) =
 			let args, ret as sigt = Lazy.force sigt in
 			let mid = add_global (`Method (jname, sigt)) in
 			[%stri let [%p Pat.var (mk_loc name)] =
-				[%e (gen_func ("obj" :: List.mapi (fun i _ -> arg_name i) args) (
+				[%e gen_func ("obj" :: List.mapi (fun i _ -> arg_name i) args) (
 					mk_sequence (
 						List.mapi (fun i ti -> ti.push_func (arg_name i)) args
 						@ [ ret.call_func mid ])
-				))]] :: items
+				)]] :: items
+
+		| `Field (name, jname, ti, mut)	->
+			let ti = Lazy.force ti in
+			let fid = add_global (`Field (jname, ti)) in
+			let setter = if not mut then [] else [ [%stri
+				let [%p Pat.var (mk_loc ("set'" ^ name))] = (fun obj v ->
+					[%e ti.write_field fid]
+				) ] ] in
+			[%stri let [%p Pat.var (mk_loc ("get'" ^ name))] = (fun obj ->
+				[%e ti.read_field fid]
+			)] :: setter @ items
+
 	) fields [] in
 
 	(* Globals *)
@@ -223,6 +266,13 @@ let gen_class (class_name, java_name, fields) =
 					[%e Exp.constant (Const.string name)]
 					[%e Exp.constant (Const.string (jni_meth_sigt sigt))]]
 			:: items
+
+		| id, `Field (name, ti)			->
+			[%stri let [%p Pat.var (mk_loc id)] = Jclass.get_field __cls
+					[%e Exp.constant (Const.string name)]
+					[%e Exp.constant (Const.string ti.sigt)]]
+			:: items
+
 	) items !globals in
 
 	(* Pervasives *)
