@@ -50,13 +50,17 @@ let rec mk_sequence =
 (* Type info *)
 
 (* The variable `obj` is expected to be defined,
-	`write_field` expects the variable `v` to be defined *)
+	`write_field` expects the variable `v` to be defined
+	`call_static` expects `__cls` *)
 type type_info = {
 	sigt : string;
-	push_func : string -> expression;
-	call_func : string -> expression;
+	push : string -> expression;
+	call : string -> expression;
+	call_static : string -> expression;
 	read_field : string -> expression;
-	write_field : string -> expression
+	write_field : string -> expression;
+	read_field_static : string -> expression;
+	write_field_static : string -> expression
 }
 
 let jni_meth_sigt (args, ret) =
@@ -67,39 +71,56 @@ let jni_meth_sigt (args, ret) =
 
 let unwrap_core_type =
 	let t sigt n =
-		let push_func arg = mk_call_dot_s ("Java", "push_" ^ n) [ arg ]
-		and call_func mid = mk_call_dot_s ("Java", "call_" ^ n) [ "obj"; mid ]
+		let push arg = mk_call_dot_s ("Java", "push_" ^ n) [ arg ]
+		and call mid = mk_call_dot_s ("Java", "call_" ^ n) [ "obj"; mid ]
+		and call_static mid =
+			mk_call_dot_s ("Java", "call_static_" ^ n) [ "__cls"; mid ]
 		and read_field fid =
 			mk_call_dot_s ("Java", "read_field_" ^ n) [ "obj"; fid ]
 		and write_field fid =
 			mk_call_dot_s ("Java", "write_field_" ^ n) [ "obj"; fid; "v" ]
+		and read_field_static fid =
+			mk_call_dot_s ("Java", "read_field_static_" ^ n) [ "__cls"; fid ]
+		and write_field_static fid =
+			mk_call_dot_s ("Java", "write_field_static_" ^ n) [ "__cls"; fid; "v" ]
 		in
-		{ sigt; push_func; call_func; read_field; write_field }
+		{ sigt; push; call; call_static; read_field; write_field;
+			read_field_static; write_field_static }
 	in
 
 	let t_class name conv_to conv_of =
 		let cn = java_class_fmt (Hashtbl.find known_classes name) in
-		let push_func arg =
+		let push arg =
 			[%expr Java.push_object ([%e conv_to (mk_ident [ arg ])])]
-		and call_func arg =
-			conv_of [%expr Java.call_object obj [%e mk_ident [ arg ]]]
-		and read_field arg =
-			conv_of [%expr Java.read_field_object obj [%e mk_ident [ arg ]]]
-		and write_field arg =
-			[%expr Java.write_field_object ([%e conv_to (mk_ident [ arg ])])]
+		and call mid =
+			conv_of [%expr Java.call_object obj [%e mk_ident [ mid ]]]
+		and call_static mid =
+			conv_of [%expr Java.call_object_static __cls [%e mk_ident [ mid ]]]
+		and read_field fid =
+			conv_of [%expr Java.read_field_object obj [%e mk_ident [ fid ]]]
+		and write_field fid =
+			[%expr Java.write_field_object ([%e conv_to (mk_ident [ fid ])])]
+		and read_field_static fid =
+			conv_of [%expr Java.read_field_static_object obj [%e mk_ident [ fid ]]]
+		and write_field_static fid =
+			[%expr Java.write_field_static_object ([%e conv_to (mk_ident [ fid ])])]
 		in
-		{ sigt = "L" ^ cn ^ ";";
-			push_func; call_func;
-			read_field; write_field }
+		{ sigt = "L" ^ cn ^ ";"; push; call; call_static;
+			read_field; write_field; read_field_static; write_field_static }
 	in
 
 	function
 	| [%type: unit] as t			->
 		let disabled _ = Location.raise_errorf ~loc:t.ptyp_loc
 			"unit can only be a return type"
-		and call_func mid = mk_call_dot_s ("Java", "call_void") [ "obj"; mid ] in
-		{ sigt = "V"; push_func = disabled; call_func;
-			read_field = disabled; write_field = disabled }
+		and call mid =
+			mk_call_dot_s ("Java", "call_void") [ "obj"; mid ]
+		and call_static mid =
+			mk_call_dot_s ("Java", "call_static_void") [ "__cls"; mid ]
+		in
+		{ sigt = "V"; push = disabled; call; call_static;
+			read_field = disabled; write_field = disabled;
+			read_field_static = disabled; write_field_static = disabled }
 
 	| [%type: int]					-> t "I" "int"
 	| [%type: bool]					-> t "Z" "bool"
@@ -149,15 +170,24 @@ let rec unwrap_method_type =
 	| t								-> [], unwrap_core_type t
 
 let unwrap_class_field =
+	let rec is_static =
+		function
+		| ({ txt = "static" }, PStr []) :: _ -> true
+		| []		-> false
+		| _ :: tl	-> is_static tl
+	in
+
 	function
-	| { pcf_desc = Pcf_method ({ txt = name }, visi, impl); pcf_loc = loc }	->
+	| { pcf_desc = Pcf_method ({ txt = name }, visi, impl); pcf_loc = loc;
+			pcf_attributes }	->
 		begin match impl with
 		| _ when visi <> Public				->
 			Location.raise_errorf ~loc "Private method"
 		| Cfk_concrete (Fresh, { pexp_desc = Pexp_poly (
 				{ pexp_desc = Pexp_constant (Pconst_string (jname, None)) },
 				Some mtype) })				->
-			`Method (name, jname, lazy (unwrap_method_type mtype))
+			let m = name, jname, lazy (unwrap_method_type mtype) in
+			if is_static pcf_attributes then `Method_static m else `Method m
 		| Cfk_concrete (Fresh, { pexp_desc = Pexp_poly (
 				{ pexp_loc = loc }, _) })	->
 			Location.raise_errorf ~loc "Expecting Java method name"
@@ -170,12 +200,14 @@ let unwrap_class_field =
 			Location.raise_errorf ~loc "Override method"
 		end
 
-	| { pcf_desc = Pcf_val ({ txt = name }, mut, impl); pcf_loc = loc }		->
+	| { pcf_desc = Pcf_val ({ txt = name }, mut, impl); pcf_loc = loc;
+			pcf_attributes }	->
 		begin match impl with
 		| Cfk_concrete (Fresh, { pexp_desc = Pexp_constraint (
 				{ pexp_desc = Pexp_constant (Pconst_string (jname, None)) },
 				ftype ) })					->
-			`Field (name, jname, lazy (unwrap_core_type ftype), mut = Mutable)
+			let f = name, jname, lazy (unwrap_core_type ftype), mut = Mutable in
+			if is_static pcf_attributes then `Field_static f else `Field f
 		| Cfk_concrete (Fresh, { pexp_desc = Pexp_constraint (
 				{ pexp_loc = loc }, _ ) })	->
 			Location.raise_errorf ~loc "Expecting Java field name"
@@ -233,46 +265,77 @@ let gen_class (class_name, java_name, fields) =
 	in
 
 	(* Methods *)
-	let items = List.fold_right (fun field items ->
+	let items =
+		let gen_method name args call =
+			[%stri let [%p Pat.var (mk_loc name)] =
+				[%e gen_func ("obj" :: List.mapi (fun i _ -> arg_name i) args) (
+					mk_sequence (
+						List.mapi (fun i ti -> ti.push (arg_name i)) args
+						@ [ call ])
+				)]]
+
+		and gen_field name mut read write =
+			let var prefix = Pat.var (mk_loc (prefix ^ name)) in
+			let getter = [%stri let [%p var "get'"] = [%e read]] in
+			let setter =
+				if mut then [ [%stri let [%p var "set'"] = [%e write]] ]
+				else []
+			in
+			getter :: setter
+		in
+
+		List.fold_right (fun field items ->
 		match field with
 		| `Method (name, jname, sigt)	->
 			let args, ret as sigt = Lazy.force sigt in
 			let mid = add_global (`Method (jname, sigt)) in
-			[%stri let [%p Pat.var (mk_loc name)] =
-				[%e gen_func ("obj" :: List.mapi (fun i _ -> arg_name i) args) (
-					mk_sequence (
-						List.mapi (fun i ti -> ti.push_func (arg_name i)) args
-						@ [ ret.call_func mid ])
-				)]] :: items
+			gen_method name args
+				(ret.call mid)
+			:: items
+
+		| `Method_static (name, jname, sigt)	->
+			let args, ret as sigt = Lazy.force sigt in
+			let mid = add_global (`Method (jname, sigt)) in
+			gen_method name args
+				(ret.call_static mid)
+			:: items
 
 		| `Field (name, jname, ti, mut)	->
 			let ti = Lazy.force ti in
 			let fid = add_global (`Field (jname, ti)) in
-			let setter = if not mut then [] else [ [%stri
-				let [%p Pat.var (mk_loc ("set'" ^ name))] = (fun obj v ->
-					[%e ti.write_field fid]
-				) ] ] in
-			[%stri let [%p Pat.var (mk_loc ("get'" ^ name))] = (fun obj ->
-				[%e ti.read_field fid]
-			)] :: setter @ items
+			gen_field name mut
+				[%expr (fun obj -> [%e ti.read_field fid])]
+				[%expr (fun obj v -> [%e ti.write_field fid])]
+			@ items
+
+		| `Field_static (name, jname, ti, mut)	->
+			let ti = Lazy.force ti in
+			let fid = add_global (`Field_static (jname, ti)) in
+			gen_field name mut
+				[%expr (fun obj -> [%e ti.read_field_static fid])]
+				[%expr (fun obj v -> [%e ti.write_field_static fid])]
+			@ items
 
 	) fields [] in
 
 	(* Globals *)
-	let items = List.fold_left (fun items ->
+	let items =
+		let g id name get arg =
+			[%stri let [%p Pat.var (mk_loc id)] = [%e get] __cls
+					[%e Exp.constant (Const.string name)]
+					[%e Exp.constant (Const.string arg)]]
+		in
+
+		List.fold_left (fun items ->
 		function
-		| id, `Method (name, sigt)		->
-			[%stri let [%p Pat.var (mk_loc id)] = Jclass.get_meth __cls
-					[%e Exp.constant (Const.string name)]
-					[%e Exp.constant (Const.string (jni_meth_sigt sigt))]]
-			:: items
-
-		| id, `Field (name, ti)			->
-			[%stri let [%p Pat.var (mk_loc id)] = Jclass.get_field __cls
-					[%e Exp.constant (Const.string name)]
-					[%e Exp.constant (Const.string ti.sigt)]]
-			:: items
-
+		| id, `Method (name, sigt)			->
+			g id name [%expr Jclass.get_meth] (jni_meth_sigt sigt) :: items
+		| id, `Method_static (name, sigt)	->
+			g id name [%expr Jclass.get_meth_static] (jni_meth_sigt sigt) :: items
+		| id, `Field (name, ti)				->
+			g id name [%expr Jclass.get_field] ti.sigt :: items
+		| id, `Field_static (name, ti)		->
+			g id name [%expr Jclass.get_field_static] ti.sigt :: items
 	) items !globals in
 
 	(* Pervasives *)
