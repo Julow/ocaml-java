@@ -1,6 +1,15 @@
 # error_2_class_param.ml
 [%%ocaml.error ;;"Expecting object"
   ;;""]
+# error_constructor_return.ml
+[%%ocaml.error ;;"Constructor must returns `_'"
+  ;;""]
+# error_constructor_return_2.ml
+[%%ocaml.error ;;"Constructor must returns `_'"
+  ;;""]
+# error_field_any.ml
+[%%ocaml.error ;;"`_' cannot be used here"
+  ;;""]
 # error_field_missing_type.ml
 [%%ocaml.error ;;"Expecting field type"
   ;;""]
@@ -9,6 +18,15 @@
   ;;""]
 # error_field_unsupported_type.ml
 [%%ocaml.error ;;"Unsupported type"
+  ;;""]
+# error_meth_any_arg.ml
+[%%ocaml.error ;;"`_' cannot be used here"
+  ;;""]
+# error_meth_any_return.ml
+[%%ocaml.error ;;"`_' cannot be used here"
+  ;;""]
+# error_meth_any_return_2.ml
+[%%ocaml.error ;;"`_' cannot be used here"
   ;;""]
 # error_missing_classpath.ml
 [%%ocaml.error ;;"Expecting Java class path"
@@ -64,29 +82,31 @@ module Test =
       if Java.instanceof obj __cls
       then of_obj_unsafe obj
       else failwith "of_obj"
-    let __0 = Jclass.get_meth __cls "f" "(Ltest/Test;)V"
-    let __1 = Jclass.get_meth __cls "e" "(Ltest/Test;)Ltest/Test;"
-    let __2 = Jclass.get_meth __cls "d" "(Ltest/Test;)Ltest/Test;"
-    let __3 =
+    let __0 = Jclass.get_constructor __cls "(La/A;Ljuloo/javacaml/Value;I)V"
+    let __1 = Jclass.get_constructor __cls "()V"
+    let __2 = Jclass.get_meth __cls "f" "(Ltest/Test;)V"
+    let __3 = Jclass.get_meth __cls "e" "(Ltest/Test;)Ltest/Test;"
+    let __4 = Jclass.get_meth __cls "d" "(Ltest/Test;)Ltest/Test;"
+    let __5 =
       Jclass.get_meth __cls "c"
         "(IZBSIJCFDLjava/lang/String;Ljava/lang/String;Ljuloo/javacaml/Value;Ljuloo/javacaml/Value;)V"
-    let __4 = Jclass.get_meth __cls "b" "()V"
-    let __5 = Jclass.get_meth __cls "a" "(La/A;)La/A;"
-    let __6 = Jclass.get_field_static __cls "c" "I"
-    let __7 = Jclass.get_field __cls "b" "Ljuloo/javacaml/Value;"
-    let __8 = Jclass.get_field __cls "a" "La/A;"
+    let __6 = Jclass.get_meth __cls "b" "()V"
+    let __7 = Jclass.get_meth __cls "a" "(La/A;)La/A;"
+    let __8 = Jclass.get_field_static __cls "c" "I"
+    let __9 = Jclass.get_field __cls "b" "Ljuloo/javacaml/Value;"
+    let __10 = Jclass.get_field __cls "a" "La/A;"
     let get'a obj =
-      let r = Java.read_field_object obj __8 in
+      let r = Java.read_field_object obj __10 in
       if r == Java.null then failwith "null obj" else A.of_obj_unsafe r
-    let get'b obj = Java.read_field_value_opt obj __7
-    let set'b obj v = Java.write_field_value_opt obj __7 v
-    let get'c obj = Java.read_field_static_int __cls __6
-    let set'c obj v = Java.write_field_static_int __cls __6 v
+    let get'b obj = Java.read_field_value_opt obj __9
+    let set'b obj v = Java.write_field_value_opt obj __9 v
+    let get'c obj = Java.read_field_static_int __cls __8
+    let set'c obj v = Java.write_field_static_int __cls __8 v
     let a obj x0 =
       Java.push_object (A.to_obj x0);
-      (let r = Java.call_object obj __5 in
+      (let r = Java.call_object obj __7 in
        if r == Java.null then failwith "null obj" else A.of_obj_unsafe r)
-    let b obj = Java.call_void obj __4
+    let b obj = Java.call_void obj __6
     let c obj x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 =
       Java.push_int x0;
       Java.push_bool x1;
@@ -101,16 +121,22 @@ module Test =
       Java.push_string_opt x10;
       Java.push_value x11;
       Java.push_value_opt x12;
-      Java.call_void obj __3
+      Java.call_void obj __5
     let d obj x0 =
       Java.push_object (Test.to_obj x0);
-      (let r = Java.call_object obj __2 in
+      (let r = Java.call_object obj __4 in
        if r == Java.null then failwith "null obj" else Test.of_obj_unsafe r)
     let e obj x0 =
       Java.push_object
         (match x0 with | Some arg -> Test.to_obj arg | None -> Java.null);
-      (let r = Java.call_object obj __1 in
+      (let r = Java.call_object obj __3 in
        if r == Java.null then None else Some (Test.of_obj_unsafe r))
-    let f obj x0 =
-      Java.push_object (Test.to_obj x0); Java.call_static_void __cls __0
+    let f x0 =
+      Java.push_object (Test.to_obj x0); Java.call_static_void __cls __2
+    let create_default () = Java.new_ __cls __1
+    let create x0 x1 x2 =
+      Java.push_object (A.to_obj x0);
+      Java.push_value x1;
+      Java.push_int x2;
+      Java.new_ __cls __0
   end

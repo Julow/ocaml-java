@@ -20,4 +20,7 @@ object
 	method e : test option -> test option = "e"
 	method [@static] f : test -> unit = "f"
 
+	initializer (create_default : _)
+	initializer (create : a -> test value -> int -> _)
+
 end

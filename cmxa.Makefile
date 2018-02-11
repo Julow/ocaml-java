@@ -18,6 +18,8 @@ CCINCLUDES = \
 CCFLAGS = -Wall -Wextra -O2 -fPIC $(CCINCLUDES) $(EXTRA_CCFLAGS)
 OCAMLOPTFLAGS = -I $(B) -I $(T)
 
+all: $(T)/camljava.cmxa $(T)/javacaml.cmxa
+
 # -
 
 CMX_FILES = $(T)/java.cmx $(T)/jarray.cmx $(T)/jclass.cmx $(T)/jthrowable.cmx
@@ -84,4 +86,4 @@ clean::
 $(sort $(B) $(T)):
 	mkdir -p $@
 
-.PHONY: clean
+.PHONY: all clean

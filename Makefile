@@ -38,10 +38,10 @@ MAKE_JAVACAML = make -f cmxa.Makefile \
 		EXTRA_CCFLAGS="-DTARGET_JAVACAML -fPIC"
 
 $(T)/camljava.cmxa:
-	$(MAKE_CAMLJAVA) $@
+	$(MAKE_CAMLJAVA) all
 
 $(T)/javacaml.cmxa:
-	$(MAKE_JAVACAML) $@
+	$(MAKE_JAVACAML) all
 
 MAKE_PPX = make -f ppx.Makefile \
 		BUILD_DIR=$(BUILD_DIR)/ppx \
