@@ -63,6 +63,26 @@ type type_info = {
 	write_field_static : string -> expression
 }
 
+let type_info ~push ~call ~call_static ~read_field ~write_field
+	~read_field_static ~write_field_static sigt conv_to conv_of =
+	let push arg =
+		[%expr [%e push] ([%e conv_to (mk_ident [ arg ])])]
+	and call mid =
+		conv_of [%expr [%e call] obj [%e mk_ident [ mid ]]]
+	and call_static mid =
+		conv_of [%expr [%e call_static] __cls [%e mk_ident [ mid ]]]
+	and read_field fid =
+		conv_of [%expr [%e read_field] obj [%e mk_ident [ fid ]]]
+	and write_field fid =
+		[%expr [%e write_field] obj ([%e conv_to (mk_ident [ fid ])])]
+	and read_field_static fid =
+		conv_of [%expr [%e read_field_static] __cls [%e mk_ident [ fid ]]]
+	and write_field_static fid =
+		[%expr [%e write_field_static] __cls ([%e conv_to (mk_ident [ fid ])])]
+	in
+	{ sigt; push; call; call_static; read_field; write_field;
+		read_field_static; write_field_static }
+
 let concat_sigt args =
 	String.concat "" @@
 	List.map (fun t -> t.sigt) args
@@ -73,57 +93,42 @@ let jni_meth_sigt (args, ret) =
 (* Unwrapper *)
 
 let unwrap_core_type =
-	let t sigt n =
-		let push arg = mk_call_dot_s ("Java", "push_" ^ n) [ arg ]
-		and call mid = mk_call_dot_s ("Java", "call_" ^ n) [ "obj"; mid ]
-		and call_static mid =
-			mk_call_dot_s ("Java", "call_static_" ^ n) [ "__cls"; mid ]
-		and read_field fid =
-			mk_call_dot_s ("Java", "read_field_" ^ n) [ "obj"; fid ]
-		and write_field fid =
-			mk_call_dot_s ("Java", "write_field_" ^ n) [ "obj"; fid; "v" ]
-		and read_field_static fid =
-			mk_call_dot_s ("Java", "read_field_static_" ^ n) [ "__cls"; fid ]
-		and write_field_static fid =
-			mk_call_dot_s ("Java", "write_field_static_" ^ n) [ "__cls"; fid; "v" ]
+	let ti sigt suffix conv_to conv_of =
+		let id prefix =
+			Exp.ident (mk_loc (Ldot (Lident "Java", prefix ^ suffix)))
 		in
-		{ sigt; push; call; call_static; read_field; write_field;
-			read_field_static; write_field_static }
+		type_info
+			~push:(id "push_")
+			~call:(id "call_")
+			~call_static:(id "call_static_")
+			~read_field:(id "read_field_")
+			~write_field:(id "write_field_")
+			~read_field_static:(id "read_field_static_")
+			~write_field_static:(id "write_field_static_")
+			sigt conv_to conv_of
 	in
 
-	let t_class name conv_to conv_of =
+	let ti_class name conv_to conv_of =
 		let cn = java_class_fmt (Hashtbl.find known_classes name) in
-		let push arg =
-			[%expr Java.push_object ([%e conv_to (mk_ident [ arg ])])]
-		and call mid =
-			conv_of [%expr Java.call_object obj [%e mk_ident [ mid ]]]
-		and call_static mid =
-			conv_of [%expr Java.call_object_static __cls [%e mk_ident [ mid ]]]
-		and read_field fid =
-			conv_of [%expr Java.read_field_object obj [%e mk_ident [ fid ]]]
-		and write_field fid =
-			[%expr Java.write_field_object ([%e conv_to (mk_ident [ fid ])])]
-		and read_field_static fid =
-			conv_of [%expr Java.read_field_static_object obj [%e mk_ident [ fid ]]]
-		and write_field_static fid =
-			[%expr Java.write_field_static_object ([%e conv_to (mk_ident [ fid ])])]
-		in
-		{ sigt = "L" ^ cn ^ ";"; push; call; call_static;
-			read_field; write_field; read_field_static; write_field_static }
+		ti ("L" ^ cn ^ ";") "object" conv_to conv_of
+
+	and ti sigt suffix type_ =
+		let annot expr = [%expr ([%e expr] : [%t type_])] in
+		ti sigt suffix annot annot
 	in
 
 	function
 	| [%type: unit] as t			->
-		let disabled _ = Location.raise_errorf ~loc:t.ptyp_loc
+		let d _ = Location.raise_errorf ~loc:t.ptyp_loc
 			"unit can only be a return type"
 		and call mid =
-			mk_call_dot_s ("Java", "call_void") [ "obj"; mid ]
+			[%expr Java.call_void obj [%e mk_ident [ mid ]]]
 		and call_static mid =
-			mk_call_dot_s ("Java", "call_static_void") [ "__cls"; mid ]
+			[%expr Java.call_static_void __cls [%e mk_ident [ mid ]]]
 		in
-		{ sigt = "V"; push = disabled; call; call_static;
-			read_field = disabled; write_field = disabled;
-			read_field_static = disabled; write_field_static = disabled }
+		{ sigt = "V"; push = d; call; call_static;
+			read_field = d; write_field = d;
+			read_field_static = d; write_field_static = d }
 
 	| [%type: _] as t				->
 		let d _ = Location.raise_errorf ~loc:t.ptyp_loc
@@ -132,25 +137,26 @@ let unwrap_core_type =
 		{ sigt = ""; push = d; call = d; call_static = d; read_field = d;
 			write_field = d; read_field_static = d; write_field_static = d }
 
-	| [%type: int]					-> t "I" "int"
-	| [%type: bool]					-> t "Z" "bool"
-	| [%type: byte]					-> t "B" "byte"
-	| [%type: short]				-> t "S" "short"
-	| [%type: int32]				-> t "I" "int32"
-	| [%type: long]					-> t "J" "long"
-	| [%type: char]					-> t "C" "char"
-	| [%type: float]				-> t "F" "float"
-	| [%type: double]				-> t "D" "double"
-	| [%type: string]				-> t "Ljava/lang/String;" "string"
-	| [%type: string option]		-> t "Ljava/lang/String;" "string_opt"
-	| [%type: [%t? _] value]		-> t "Ljuloo/javacaml/Value;" "value"
-	| [%type: [%t? _] value option]	-> t "Ljuloo/javacaml/Value;" "value_opt"
-	| [%type: Java.obj]				-> t "Ljava/lang/Object;" "object"
+	| [%type: int] as t				-> ti "I" "int" t
+	| [%type: bool] as t			-> ti "Z" "bool" t
+	| [%type: byte]					-> ti "B" "byte" [%type: int]
+	| [%type: short]				-> ti "S" "short" [%type: int]
+	| [%type: int32]				-> ti "I" "int32" [%type: Int32.t]
+	| [%type: long]					-> ti "J" "long" [%type: Int64.t]
+	| [%type: char] as t			-> ti "C" "char" t
+	| [%type: float] as t			-> ti "F" "float" t
+	| [%type: double]				-> ti "D" "double" [%type: float]
+	| [%type: string] as t			-> ti "Ljava/lang/String;" "string" t
+	| [%type: string option] as t	-> ti "Ljava/lang/String;" "string_opt" t
+	| [%type: [%t? t] value]		-> ti "Ljuloo/javacaml/Value;" "value" t
+	| [%type: [%t? t] value option]	->
+		ti "Ljuloo/javacaml/Value;" "value_opt" [%type: [%t t] option]
+	| [%type: Java.obj] as t		-> ti "Ljava/lang/Object;" "object" t
 
 	| [%type: [%t? { ptyp_desc = Ptyp_constr ({ txt = Lident name }, []) }]]
 			when Hashtbl.mem known_classes name ->
 		let mn = module_name name in
-		t_class name
+		ti_class name
 			(fun v -> [%expr [%e mk_ident [ mn; "to_obj" ]] [%e v]])
 			(fun obj -> [%expr let r = [%e obj] in
 				if r == Java.null then failwith "null obj"
@@ -159,7 +165,7 @@ let unwrap_core_type =
 	| [%type: [%t? { ptyp_desc = Ptyp_constr ({ txt = Lident name }, []) }] option]
 			when Hashtbl.mem known_classes name ->
 		let mn = module_name name in
-		t_class name
+		ti_class name
 			(fun v -> [%expr match [%e v] with
 				| Some arg	-> [%e mk_ident [ mn; "to_obj" ]] arg
 				| None		-> Java.null])
