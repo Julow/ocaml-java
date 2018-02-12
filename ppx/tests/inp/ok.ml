@@ -25,3 +25,21 @@ object
 	initializer (create : a -> test value -> int -> _)
 
 end
+
+class%java string_builder "java.lang.StringBuilder" =
+object
+	initializer (create : _)
+	method to_string : jstring = "toString"
+end
+
+and jstring "java.lang.String" =
+object
+	initializer (of_builder : string_builder -> _)
+	method to_string : string = "toString"
+end
+
+class%java jfloat "java.lang.Float" =
+object
+	method float_value : float = "floatValue"
+	method [@static] of_string : jstring -> jfloat = "valueOf"
+end

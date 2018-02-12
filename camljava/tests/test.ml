@@ -260,6 +260,54 @@ object
 
 end
 
+module Java_lang =
+struct
+
+	class%java string_builder "java.lang.StringBuilder" =
+	object
+
+		initializer (create : _)
+
+		method append_char : char -> string_builder = "append"
+		method append_int : int -> string_builder = "append"
+		method append_string : string -> string_builder = "append"
+
+		method to_string : jstring = "toString"
+
+	end
+
+	and jstring "java.lang.String" =
+	object
+
+		initializer (create : string -> _)
+		initializer (empty : _)
+		initializer (of_builder : string_builder -> _)
+
+		method char_at : int -> char = "charAt"
+
+		method [@static] of_bool : bool -> jstring = "valueOf"
+		method [@static] of_int : int -> jstring = "valueOf"
+		method [@static] of_char : char -> jstring = "valueOf"
+
+		method to_string : string = "toString"
+
+	end
+
+	class%java jfloat "java.lang.Float" =
+	object
+
+		initializer (create : double -> _)
+
+		method to_string : string = "toString"
+
+		method float_value : float = "floatValue"
+
+		method [@static] of_string : jstring -> jfloat = "valueOf"
+
+	end
+
+end
+
 let test_ppx () =
 	let _ = Test.create_default () in
 	let obj = Test.create 11 "x" in
@@ -277,6 +325,19 @@ let test_ppx () =
 	Test.set'test_f 0;
 	assert (Test.test_static 5 = 5);
 	Test.set'test_f save;
+	let open Java_lang in
+	let builder = String_builder.create () in
+	ignore (String_builder.append_char builder '0');
+	ignore (String_builder.append_string builder ".4");
+	ignore (String_builder.append_int builder 2);
+	let str = String_builder.to_string builder in
+	assert (Jstring.char_at str 0 = '0');
+	assert (Jstring.to_string str = "0.42");
+	assert (Jstring.to_string (Jstring.of_bool true) = "true");
+	assert (Jstring.to_string (Jstring.of_int 783213) = "783213");
+	assert (Jstring.to_string (Jstring.of_char '`') = "`");
+	let flt = Jfloat.of_string (Jstring.of_builder builder) in
+	assert (Jfloat.to_string flt = "0.42");
 	()
 
 let () = Callback.register "camljava_do_test" test

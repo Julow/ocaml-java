@@ -39,8 +39,17 @@ let rec mk_sequence =
 	| []		-> assert false
 
 let mk_let id expr = [%stri let [%p Pat.var (mk_loc id)] = [%e expr]]
+let mk_val id type_ = Sig.value (Val.mk (mk_loc id) type_)
 
 let mk_cstr s = Exp.constant (Const.string s)
+
+let mk_fun args body =
+	let inc arg body = Exp.fun_ Nolabel None (Pat.var (mk_loc arg)) body in
+	List.fold_right inc args body
+
+let mk_arrow args ret =
+	let inc arg arrow = [%type: [%t arg] -> [%t arrow]] in
+	List.fold_right inc args ret
 
 let opti_string_concat exp =
 	let rec flatten acc =
@@ -76,6 +85,7 @@ let opti_string_concat exp =
 	`call_static` expects `__cls` *)
 type type_info = {
 	sigt : expression;
+	type_ : core_type;
 	push : string -> expression;
 	call : string -> expression;
 	call_static : string -> expression;
@@ -86,17 +96,17 @@ type type_info = {
 }
 
 let type_info ~push ~call ~call_static ~read_field ~write_field
-	~read_field_static ~write_field_static sigt conv_to conv_of =
+	~read_field_static ~write_field_static sigt type_ conv_to conv_of =
 	let push arg =
 		[%expr [%e push] ([%e conv_to (mk_ident [ arg ])])]
 	and call mid =
-		conv_of [%expr [%e call] obj [%e mk_ident [ mid ]]]
+		conv_of [%expr [%e call] (to_obj obj) [%e mk_ident [ mid ]]]
 	and call_static mid =
 		conv_of [%expr [%e call_static] __cls [%e mk_ident [ mid ]]]
 	and read_field fid =
-		conv_of [%expr [%e read_field] obj [%e mk_ident [ fid ]]]
+		conv_of [%expr [%e read_field] (to_obj obj) [%e mk_ident [ fid ]]]
 	and write_field fid =
-		[%expr [%e write_field] obj [%e mk_ident [ fid ]]
+		[%expr [%e write_field] (to_obj obj) [%e mk_ident [ fid ]]
 			[%e conv_to [%expr v]]]
 	and read_field_static fid =
 		conv_of [%expr [%e read_field_static] __cls [%e mk_ident [ fid ]]]
@@ -104,7 +114,7 @@ let type_info ~push ~call ~call_static ~read_field ~write_field
 		[%expr [%e write_field_static] __cls [%e mk_ident [ fid ]]
 			[%e conv_to [%expr v]]]
 	in
-	{ sigt; push; call; call_static; read_field; write_field;
+	{ sigt; type_; push; call; call_static; read_field; write_field;
 		read_field_static; write_field_static }
 
 let rec concat_sigt =
@@ -118,8 +128,15 @@ let jni_meth_sigt (args, ret) =
 
 (* Unwrapper *)
 
-let unwrap_core_type =
-	let ti sigt suffix conv_to conv_of =
+(* `near_classes` is the assoc list (class_name, java_path) for  *)
+type context = {
+	class_name : string;
+	java_path : string;
+	near_classes : (string * string) list
+}
+
+let unwrap_core_type ctx =
+	let ti sigt suffix type_ conv_to conv_of =
 		let id prefix = mk_dot (Lident "Java") (prefix ^ suffix) in
 		type_info
 			~push:(id "push_")
@@ -129,16 +146,31 @@ let unwrap_core_type =
 			~write_field:(id "write_field_")
 			~read_field_static:(id "read_field_static_")
 			~write_field_static:(id "write_field_static_")
-			sigt conv_to conv_of
+			sigt type_ conv_to conv_of
 	in
 
-	let ti_class mn conv_to conv_of =
-		let sigt = [%expr "L" ^ [%e mk_dot mn "__class_name" ] ^ ";"] in
-		ti sigt "object" conv_to conv_of
+	let ti_class mn java_path type_ conv_to conv_of =
+		let sigt = [%expr "L" ^ [%e java_path] ^ ";"] in
+		ti sigt "object" type_ conv_to conv_of
 
 	and ti sigt suffix type_ =
-		let annot expr = [%expr ([%e expr] : [%t type_])] in
-		ti (mk_cstr sigt) suffix annot annot
+		let no_conv expr = expr in
+		ti (mk_cstr sigt) suffix type_ no_conv no_conv
+	in
+
+	let mn =
+		function
+		| Lident cn when cn = ctx.class_name ->
+			(fun s -> mk_loc (Lident s)),
+			mk_cstr ctx.java_path
+		| Lident cn as id when List.mem_assoc cn ctx.near_classes ->
+			let mn = module_name id in
+			(fun s -> mk_loc (Ldot (mn, s))),
+			mk_cstr (List.assoc cn ctx.near_classes)
+		| id ->
+			let mn = module_name id in
+			(fun s -> mk_loc (Ldot (mn, s))),
+			[%expr [%e mk_dot mn "__class_name" ] ()]
 	in
 
 	function
@@ -146,11 +178,11 @@ let unwrap_core_type =
 		let d _ = Location.raise_errorf ~loc:t.ptyp_loc
 			"unit can only be a return type"
 		and call mid =
-			[%expr Java.call_void obj [%e mk_ident [ mid ]]]
+			[%expr Java.call_void (to_obj obj) [%e mk_ident [ mid ]]]
 		and call_static mid =
 			[%expr Java.call_static_void __cls [%e mk_ident [ mid ]]]
 		in
-		{ sigt = mk_cstr "V"; push = d; call; call_static;
+		{ sigt = mk_cstr "V"; type_ = t; push = d; call; call_static;
 			read_field = d; write_field = d;
 			read_field_static = d; write_field_static = d }
 
@@ -158,8 +190,8 @@ let unwrap_core_type =
 		let d _ = Location.raise_errorf ~loc:t.ptyp_loc
 			"`_' cannot be used here"
 		in
-		{ sigt = Exp.unreachable (); push = d; call = d; call_static = d;
-			read_field = d; write_field = d;
+		{ sigt = Exp.unreachable (); type_ = t; push = d; call = d;
+			call_static = d; read_field = d; write_field = d;
 			read_field_static = d; write_field_static = d }
 
 	| [%type: int] as t				-> ti "I" "int" t
@@ -179,36 +211,36 @@ let unwrap_core_type =
 	| [%type: Java.obj] as t		-> ti "Ljava/lang/Object;" "object" t
 
 	| [%type: [%t? { ptyp_desc = Ptyp_constr ({ txt = id }, []) }]] ->
-		let mn = module_name id in
-		ti_class mn
-			(fun v -> [%expr [%e mk_dot mn "to_obj"] [%e v]])
+		let mn, java_path = mn id in
+		ti_class mn java_path (Typ.constr (mn "t") [])
+			(fun v -> [%expr [%e Exp.ident (mn "to_obj")] [%e v]])
 			(fun obj -> [%expr let r = [%e obj] in
 				if r == Java.null then failwith "null obj"
-				else [%e mk_dot mn "of_obj_unsafe" ] r])
+				else [%e Exp.ident (mn "of_obj_unsafe") ] r])
 
 	| [%type: [%t? { ptyp_desc = Ptyp_constr ({ txt = id }, []) }] option] ->
-		let mn = module_name id in
-		ti_class mn
+		let mn, java_path = mn id in
+		ti_class mn java_path (Typ.constr (mn "t") [])
 			(fun v -> [%expr match [%e v] with
-				| Some arg	-> [%e mk_dot mn "to_obj" ] arg
+				| Some arg	-> [%e Exp.ident (mn "to_obj") ] arg
 				| None		-> Java.null])
 			(fun obj -> [%expr let r = [%e obj] in
 				if r == Java.null then None
-				else Some ([%e mk_dot mn "of_obj_unsafe" ] r)])
+				else Some ([%e Exp.ident (mn "of_obj_unsafe") ] r)])
 
 	| { ptyp_loc = loc } -> Location.raise_errorf ~loc "Unsupported type"
 
-let rec unwrap_method_type =
+let rec unwrap_method_type ctx =
 	function
 	| [%type: [%t? lhs] -> [%t? rhs]]	->
 		let args, ret = match rhs with
-			| [%type: [%t? _] -> [%t? _]]	-> unwrap_method_type rhs
-			| _								-> [], unwrap_core_type rhs
+			| [%type: [%t? _] -> [%t? _]]	-> unwrap_method_type ctx rhs
+			| _								-> [], unwrap_core_type ctx rhs
 		in
-		unwrap_core_type lhs :: args, ret
-	| t								-> [], unwrap_core_type t
+		unwrap_core_type ctx lhs :: args, ret
+	| t								-> [], unwrap_core_type ctx t
 
-let unwrap_class_field =
+let unwrap_class_field ctx =
 	let rec is_static =
 		function
 		| ({ txt = "static" }, PStr []) :: _ -> true
@@ -225,7 +257,7 @@ let unwrap_class_field =
 		| Cfk_concrete (Fresh, { pexp_desc = Pexp_poly (
 				{ pexp_desc = Pexp_constant (Pconst_string (jname, None)) },
 				Some mtype) })				->
-			let m = name, jname, unwrap_method_type mtype in
+			let m = name, jname, unwrap_method_type ctx mtype in
 			if is_static pcf_attributes then `Method_static m else `Method m
 		| Cfk_concrete (Fresh, { pexp_desc = Pexp_poly (
 				{ pexp_loc = loc }, _) })	->
@@ -245,7 +277,7 @@ let unwrap_class_field =
 		| Cfk_concrete (Fresh, { pexp_desc = Pexp_constraint (
 				{ pexp_desc = Pexp_constant (Pconst_string (jname, None)) },
 				ftype ) })					->
-			let f = name, jname, unwrap_core_type ftype, mut = Mutable in
+			let f = name, jname, unwrap_core_type ctx ftype, mut = Mutable in
 			if is_static pcf_attributes then `Field_static f else `Field f
 		| Cfk_concrete (Fresh, { pexp_desc = Pexp_constraint (
 				{ pexp_loc = loc }, _ ) })	->
@@ -262,7 +294,7 @@ let unwrap_class_field =
 	| { pcf_desc = Pcf_initializer { pexp_desc =
 			Pexp_constraint ({ pexp_desc = Pexp_ident { txt = Lident name };
 					pexp_loc = loc}, ctype) } }	->
-		begin match unwrap_method_type ctype with
+		begin match unwrap_method_type ctx ctype with
 		| args, { sigt = { pexp_desc = Pexp_unreachable }}	->
 			`Constructor (name, args)
 		| _ -> Location.raise_errorf ~loc "Constructor must returns `_'"
@@ -277,17 +309,20 @@ let unwrap_class_field =
 
 (** Returns the tuple (class name, java class name, fields)
 		where fields is
-			[`Method (meth_name, java_name, lazy (args, ret types))]
+			[`Method (meth_name, path, (near_classes -> (args, ret types)))]
 	Raises `Invalid_argument` if the class is not formatted correctly *)
 let unwrap_class =
 	function
-	| {	pci_name = { txt = name };
+	| {	pci_name = { txt = class_name };
 		pci_expr = { pcl_desc = Pcl_fun (Nolabel, None,
-				{ ppat_desc = Ppat_constant (Pconst_string (java_name, None)) },
+				{ ppat_desc = Ppat_constant (Pconst_string (java_path, None)) },
 				{ pcl_desc = Pcl_structure {
 					pcstr_self = { ppat_desc = Ppat_any };
 					pcstr_fields } }) } } ->
-		(name, java_name, List.map unwrap_class_field pcstr_fields)
+		let java_path = java_class_fmt java_path in
+		(class_name, java_path, fun near_classes ->
+			let ctx = { class_name; java_path; near_classes } in
+			List.map (unwrap_class_field ctx) pcstr_fields)
 	| { pci_expr = { pcl_desc = Pcl_fun (_, _, _, { pcl_desc = Pcl_structure {
 				pcstr_self = { ppat_desc; ppat_loc = loc }
 			}})} } when ppat_desc <> Ppat_any ->
@@ -300,12 +335,68 @@ let unwrap_class =
 
 (* Gen *)
 
-let gen_func args body =
-	List.fold_right (fun arg body ->
-		Exp.fun_ Nolabel None (Pat.var (mk_loc arg)) body
-	) args body
+let gen_class_sigt (_, _, fields) =
+	let items =
+		let gen_method name args wrap ret =
+			let args = List.map (fun ti -> ti.type_) args in
+			mk_val name (wrap (mk_arrow args ret))
 
-let gen_class (class_name, java_name, fields) =
+		and gen_field name mut read write =
+			let getter = mk_val ("get'" ^ name) read
+			and setter = mk_val ("set'" ^ name) write in
+			if mut then [ getter; setter ] else [ getter ]
+
+		and wrap_no_args args t =
+			if args = [] then [%type: unit -> [%t t]] else t
+		in
+
+		List.fold_right (fun field items ->
+		match field with
+		| `Method (name, _, (args, ret))		->
+			gen_method name args
+				(fun t -> [%type: t -> [%t t]])
+				ret.type_
+			:: items
+
+		| `Method_static (name, _, (args, ret))	->
+			gen_method name args (wrap_no_args args) ret.type_
+			:: items
+
+		| `Field (name, jname, ti, mut)			->
+			gen_field name mut
+				[%type: t -> [%t ti.type_]]
+				[%type: t -> [%t ti.type_] -> unit]
+			@ items
+
+		| `Field_static (name, jname, ti, mut)	->
+			gen_field name mut
+				[%type: unit -> [%t ti.type_]]
+				[%type: [%t ti.type_] -> unit]
+			@ items
+
+		| `Constructor (name, args)				->
+			gen_method name args (wrap_no_args args) [%type: t]
+			:: items
+
+	) fields [] in
+
+	let items = [
+
+		[%sigi: type t];
+
+		[%sigi: val __class_name : unit -> string];
+
+		[%sigi: external to_obj : t -> Java.obj = "%identity"];
+
+		[%sigi: external of_obj_unsafe : Java.obj -> t = "%identity"];
+
+		[%sigi: val of_obj : Java.obj -> t];
+
+	] @ items in
+
+	Mty.signature items
+
+let gen_class_impl (_, java_name, fields) =
 	let globals, add_global =
 		let globals, count = ref [], ref 0 in
 		globals, fun g ->
@@ -321,18 +412,15 @@ let gen_class (class_name, java_name, fields) =
 		let gen_method name args wrap call =
 			let args = List.mapi (fun i _ -> arg_name i) args
 			and pushs = List.mapi (fun i ti -> ti.push (arg_name i)) args in
-			mk_let name (wrap (gen_func args (mk_sequence (pushs @ [ call ]))))
+			mk_let name (wrap (mk_fun args (mk_sequence (pushs @ [ call ]))))
 
 		and gen_field name mut read write =
 			let getter = mk_let ("get'" ^ name) read
 			and setter = mk_let ("set'" ^ name) write in
 			if mut then [ getter; setter ] else [ getter ]
-		in
 
-		let wrap_no_args args =
-			if args = []
-			then (fun body -> [%expr (fun () -> [%e body])])
-			else (fun body -> body)
+		and wrap_no_args args body =
+			if args = [] then [%expr (fun () -> [%e body])] else body
 		in
 
 		List.fold_right (fun field items ->
@@ -346,8 +434,7 @@ let gen_class (class_name, java_name, fields) =
 
 		| `Method_static (name, jname, (args, ret as sigt))	->
 			let mid = add_global (`Method_static (jname, sigt)) in
-			gen_method name args (wrap_no_args args)
-				(ret.call_static mid)
+			gen_method name args (wrap_no_args args) (ret.call_static mid)
 			:: items
 
 		| `Field (name, jname, ti, mut)			->
@@ -367,7 +454,7 @@ let gen_class (class_name, java_name, fields) =
 		| `Constructor (name, args)				->
 			let cid = add_global (`Constructor args) in
 			gen_method name args (wrap_no_args args)
-				[%expr Java.new_ __cls [%e mk_ident [ cid ]]]
+				[%expr of_obj_unsafe (Java.new_ __cls [%e mk_ident [ cid ]])]
 			:: items
 
 	) fields [] in
@@ -398,12 +485,13 @@ let gen_class (class_name, java_name, fields) =
 	) items !globals in
 
 	(* Pervasives *)
+	let class_name = mk_cstr java_name in
 	let items = [
 		[%stri type t];
 
-		[%stri let __class_name = [%e mk_cstr (java_class_fmt java_name)]];
+		[%stri let __class_name () = [%e class_name]];
 
-		[%stri let __cls = Jclass.find_class __class_name];
+		[%stri let __cls = Jclass.find_class [%e class_name]];
 
 		[%stri external to_obj : t -> Java.obj = "%identity"];
 
@@ -416,18 +504,30 @@ let gen_class (class_name, java_name, fields) =
 
 	] @ items in
 
+	Mod.structure items
+
+let gen_class (class_name, _, _ as cls) =
+	let impl = gen_class_impl cls
+	and sigt = gen_class_sigt cls in
 	let mn = String.capitalize_ascii class_name in
-	Mb.mk (mk_loc mn) (Mod.structure items)
+	Mb.mk (mk_loc mn) (Mod.constraint_ impl sigt)
 
 (* Mapper *)
 
 let structure_item mapper =
 	function
 	| { pstr_desc = Pstr_extension (({ txt = "java" }, PStr [
-			{ pstr_desc = Pstr_class [ cls ] }
+			{ pstr_desc = Pstr_class classes }
 		]), _) }	->
-		let cls = unwrap_class cls in
-		Str.module_ (gen_class cls)
+		let classes = List.map unwrap_class classes in
+		let near_classes = List.map (fun (n, p, _) -> n, p) classes in
+		let gen (name, java_path, unwrap) =
+			gen_class (name, java_path, (unwrap near_classes))
+		in
+		begin match List.map gen classes with
+		| [ cls ]	-> Str.module_ cls
+		| classes	-> Str.rec_module classes
+		end
 	| item			-> default_mapper.structure_item mapper item
 
 let mapper _ = { default_mapper with structure_item }
