@@ -96,11 +96,13 @@ let type_info ~push ~call ~call_static ~read_field ~write_field
 	and read_field fid =
 		conv_of [%expr [%e read_field] obj [%e mk_ident [ fid ]]]
 	and write_field fid =
-		[%expr [%e write_field] obj ([%e conv_to (mk_ident [ fid ])])]
+		[%expr [%e write_field] obj [%e mk_ident [ fid ]]
+			[%e conv_to [%expr v]]]
 	and read_field_static fid =
 		conv_of [%expr [%e read_field_static] __cls [%e mk_ident [ fid ]]]
 	and write_field_static fid =
-		[%expr [%e write_field_static] __cls ([%e conv_to (mk_ident [ fid ])])]
+		[%expr [%e write_field_static] __cls [%e mk_ident [ fid ]]
+			[%e conv_to [%expr v]]]
 	in
 	{ sigt; push; call; call_static; read_field; write_field;
 		read_field_static; write_field_static }
@@ -343,7 +345,7 @@ let gen_class (class_name, java_name, fields) =
 			:: items
 
 		| `Method_static (name, jname, (args, ret as sigt))	->
-			let mid = add_global (`Method (jname, sigt)) in
+			let mid = add_global (`Method_static (jname, sigt)) in
 			gen_method name args (wrap_no_args args)
 				(ret.call_static mid)
 			:: items
@@ -358,8 +360,8 @@ let gen_class (class_name, java_name, fields) =
 		| `Field_static (name, jname, ti, mut)	->
 			let fid = add_global (`Field_static (jname, ti)) in
 			gen_field name mut
-				[%expr (fun obj -> [%e ti.read_field_static fid])]
-				[%expr (fun obj v -> [%e ti.write_field_static fid])]
+				[%expr (fun () -> [%e ti.read_field_static fid])]
+				[%expr (fun v -> [%e ti.write_field_static fid])]
 			@ items
 
 		| `Constructor (name, args)				->

@@ -1,5 +1,19 @@
 (*  *)
 
+let () =
+	let jar_files = [
+		"test.jar";
+		"../../javacaml/tests/test.jar";
+		"../../bin/ocaml-java.jar"
+	] in
+	(* quick check if executed from javacaml's tests *)
+	if Sys.argv.(0) <> "" then
+		Java.init [|
+			"-Djava.class.path=" ^ String.concat ":" jar_files;
+			"-ea";
+			"-Xcheck:jni"
+		|]
+
 let () = Callback.register "get_int_pair" (fun () -> (1, 2))
 
 let test () =
@@ -227,6 +241,44 @@ let test () =
 
 	()
 
+class%java test "camljava.test.Test" =
+object
+
+	val a : int = "a"
+	val b : string = "b"
+
+	initializer (create_default : _)
+	initializer (create : int -> string -> _)
+
+	method test : int -> int -> int = "test"
+	method raise : unit = "raise"
+
+	method [@static] test_rec_b : string -> string = "test_rec_b"
+
+	val [@static] mutable test_f : int = "test_f"
+	method [@static] test_static : int -> int = "test"
+
+end
+
+let test_ppx () =
+	let _ = Test.create_default () in
+	let obj = Test.create 11 "x" in
+	assert (Test.get'a obj = 11);
+	assert (Test.get'b obj = "x");
+	assert (Test.test obj 5 6 = 11);
+	begin try Test.raise obj; assert false with Java.Exception _ -> () end;
+	let test_rec_a s =
+		if String.length s >= 10 then s
+		else Test.test_rec_b s
+	in
+	Callback.register "test_rec_a" test_rec_a;
+	assert (Test.test_rec_b "~" = "~bbbbbbbbb");
+	let save = Test.get'test_f () in
+	Test.set'test_f 0;
+	assert (Test.test_static 5 = 5);
+	Test.set'test_f save;
+	()
+
 let () = Callback.register "camljava_do_test" test
 
 let test_javacaml () =
@@ -235,22 +287,12 @@ let test_javacaml () =
 	Java.call_static_void cls m_do_test
 
 let () =
-	let jar_files = [
-		"test.jar";
-		"../../javacaml/tests/test.jar";
-		"../../bin/ocaml-java.jar"
-	] in
-	(* quick check if executed from javacaml's tests *)
 	if Sys.argv.(0) <> "" then begin
-		Java.init [|
-			"-Djava.class.path=" ^ String.concat ":" jar_files;
-			"-ea";
-			"-Xcheck:jni"
-		|];
 		try
 			for i = 0 to 10 do
 				test ();
-				test_javacaml ()
+				test_javacaml ();
+				test_ppx ()
 			done
 		with Java.Exception e ->
 			Jthrowable.print_stack_trace e;
