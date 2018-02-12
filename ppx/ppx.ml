@@ -6,19 +6,15 @@ open Longident
 
 (* - *)
 
-let module_name = String.capitalize_ascii
+let rec module_name =
+	function
+	| Ldot (l, r)	-> Ldot (l, String.capitalize_ascii r)
+	| Lident n		-> Lident (String.capitalize_ascii n)
+	| Lapply _		-> assert false
 
 let java_class_fmt = String.map (function '.' -> '/' | c -> c)
 
 let arg_name = Printf.sprintf "x%d"
-
-(* - *)
-
-(* Names of classes saw until now *)
-let known_classes = Hashtbl.create 10
-
-let add_known_class (name, jname, _) =
-    Hashtbl.add known_classes name jname
 
 (* AST Helpers *)
 
@@ -34,12 +30,7 @@ let mk_ident =
 	| l :: r	-> Exp.ident (mk_loc (ident (Lident l) r))
 	| []		-> assert false
 
-let mk_call ident args = Exp.apply (Exp.ident (mk_loc ident)) args
-let mk_call_dot (m, i) args =
-	mk_call (Ldot (Lident m, i)) (List.map (fun arg -> Nolabel, arg) args)
-let mk_call_dot_s ident args =
-	let arg arg = Exp.ident (mk_loc (Lident arg)) in
-	mk_call_dot ident (List.map arg args)
+let mk_dot l r = Exp.ident (mk_loc (Ldot (l, r)))
 
 let rec mk_sequence =
 	function
@@ -47,13 +38,44 @@ let rec mk_sequence =
 	| exp :: tl	-> Exp.sequence exp (mk_sequence tl)
 	| []		-> assert false
 
+let mk_let id expr = [%stri let [%p Pat.var (mk_loc id)] = [%e expr]]
+
+let mk_cstr s = Exp.constant (Const.string s)
+
+let opti_string_concat exp =
+	let rec flatten acc =
+		function
+		| { pexp_desc = Pexp_apply ({ pexp_desc = Pexp_ident
+				{ txt = Lident "^" } }, [ (_, l); (_, r) ])}		->
+			flatten (flatten acc l) r
+		| { pexp_desc = Pexp_constant (Pconst_string (s, None)) }	->
+			`S s :: acc
+		| e -> `E e :: acc
+	in
+	let rec opti acc =
+		function
+		| `S a :: `S b :: tl	-> opti acc (`S (b ^ a) :: tl)
+		| `E e :: tl			-> opti (e :: acc) tl
+		| `S a :: `E e :: tl	-> opti (e :: opti acc [ `S a ]) tl
+		| [ `S "" ]				-> acc
+		| [ `S a ]				-> mk_cstr a :: acc
+		| []					-> acc
+	in
+	let rec concat =
+		function
+		| [ e ]		-> [%expr [%e e]]
+		| e :: tl	-> [%expr [%e e] ^ [%e concat tl]]
+		| []		-> mk_cstr ""
+	in
+	concat (opti [] (flatten [] exp))
+
 (* Type info *)
 
 (* The variable `obj` is expected to be defined,
 	`write_field` expects the variable `v` to be defined
 	`call_static` expects `__cls` *)
 type type_info = {
-	sigt : string;
+	sigt : expression;
 	push : string -> expression;
 	call : string -> expression;
 	call_static : string -> expression;
@@ -83,20 +105,20 @@ let type_info ~push ~call ~call_static ~read_field ~write_field
 	{ sigt; push; call; call_static; read_field; write_field;
 		read_field_static; write_field_static }
 
-let concat_sigt args =
-	String.concat "" @@
-	List.map (fun t -> t.sigt) args
+let rec concat_sigt =
+	function
+	| [ arg ]	-> [%expr [%e arg.sigt]]
+	| arg :: tl	-> [%expr [%e arg.sigt] ^ [%e concat_sigt tl]]
+	| []		-> mk_cstr ""
 
 let jni_meth_sigt (args, ret) =
-	Printf.sprintf "(%s)%s" (concat_sigt args) ret.sigt
+	[%expr "(" ^ [%e concat_sigt args] ^ ")" ^ [%e ret.sigt]]
 
 (* Unwrapper *)
 
 let unwrap_core_type =
 	let ti sigt suffix conv_to conv_of =
-		let id prefix =
-			Exp.ident (mk_loc (Ldot (Lident "Java", prefix ^ suffix)))
-		in
+		let id prefix = mk_dot (Lident "Java") (prefix ^ suffix) in
 		type_info
 			~push:(id "push_")
 			~call:(id "call_")
@@ -108,13 +130,13 @@ let unwrap_core_type =
 			sigt conv_to conv_of
 	in
 
-	let ti_class name conv_to conv_of =
-		let cn = java_class_fmt (Hashtbl.find known_classes name) in
-		ti ("L" ^ cn ^ ";") "object" conv_to conv_of
+	let ti_class mn conv_to conv_of =
+		let sigt = [%expr "L" ^ [%e mk_dot mn "__class_name" ] ^ ";"] in
+		ti sigt "object" conv_to conv_of
 
 	and ti sigt suffix type_ =
 		let annot expr = [%expr ([%e expr] : [%t type_])] in
-		ti sigt suffix annot annot
+		ti (mk_cstr sigt) suffix annot annot
 	in
 
 	function
@@ -126,7 +148,7 @@ let unwrap_core_type =
 		and call_static mid =
 			[%expr Java.call_static_void __cls [%e mk_ident [ mid ]]]
 		in
-		{ sigt = "V"; push = d; call; call_static;
+		{ sigt = mk_cstr "V"; push = d; call; call_static;
 			read_field = d; write_field = d;
 			read_field_static = d; write_field_static = d }
 
@@ -134,8 +156,9 @@ let unwrap_core_type =
 		let d _ = Location.raise_errorf ~loc:t.ptyp_loc
 			"`_' cannot be used here"
 		in
-		{ sigt = ""; push = d; call = d; call_static = d; read_field = d;
-			write_field = d; read_field_static = d; write_field_static = d }
+		{ sigt = Exp.unreachable (); push = d; call = d; call_static = d;
+			read_field = d; write_field = d;
+			read_field_static = d; write_field_static = d }
 
 	| [%type: int] as t				-> ti "I" "int" t
 	| [%type: bool] as t			-> ti "Z" "bool" t
@@ -153,25 +176,23 @@ let unwrap_core_type =
 		ti "Ljuloo/javacaml/Value;" "value_opt" [%type: [%t t] option]
 	| [%type: Java.obj] as t		-> ti "Ljava/lang/Object;" "object" t
 
-	| [%type: [%t? { ptyp_desc = Ptyp_constr ({ txt = Lident name }, []) }]]
-			when Hashtbl.mem known_classes name ->
-		let mn = module_name name in
-		ti_class name
-			(fun v -> [%expr [%e mk_ident [ mn; "to_obj" ]] [%e v]])
+	| [%type: [%t? { ptyp_desc = Ptyp_constr ({ txt = id }, []) }]] ->
+		let mn = module_name id in
+		ti_class mn
+			(fun v -> [%expr [%e mk_dot mn "to_obj"] [%e v]])
 			(fun obj -> [%expr let r = [%e obj] in
 				if r == Java.null then failwith "null obj"
-				else [%e mk_ident [ mn; "of_obj_unsafe" ]] r])
+				else [%e mk_dot mn "of_obj_unsafe" ] r])
 
-	| [%type: [%t? { ptyp_desc = Ptyp_constr ({ txt = Lident name }, []) }] option]
-			when Hashtbl.mem known_classes name ->
-		let mn = module_name name in
-		ti_class name
+	| [%type: [%t? { ptyp_desc = Ptyp_constr ({ txt = id }, []) }] option] ->
+		let mn = module_name id in
+		ti_class mn
 			(fun v -> [%expr match [%e v] with
-				| Some arg	-> [%e mk_ident [ mn; "to_obj" ]] arg
+				| Some arg	-> [%e mk_dot mn "to_obj" ] arg
 				| None		-> Java.null])
 			(fun obj -> [%expr let r = [%e obj] in
 				if r == Java.null then None
-				else Some ([%e mk_ident [ mn; "of_obj_unsafe" ]] r)])
+				else Some ([%e mk_dot mn "of_obj_unsafe" ] r)])
 
 	| { ptyp_loc = loc } -> Location.raise_errorf ~loc "Unsupported type"
 
@@ -202,7 +223,7 @@ let unwrap_class_field =
 		| Cfk_concrete (Fresh, { pexp_desc = Pexp_poly (
 				{ pexp_desc = Pexp_constant (Pconst_string (jname, None)) },
 				Some mtype) })				->
-			let m = name, jname, lazy (unwrap_method_type mtype) in
+			let m = name, jname, unwrap_method_type mtype in
 			if is_static pcf_attributes then `Method_static m else `Method m
 		| Cfk_concrete (Fresh, { pexp_desc = Pexp_poly (
 				{ pexp_loc = loc }, _) })	->
@@ -222,7 +243,7 @@ let unwrap_class_field =
 		| Cfk_concrete (Fresh, { pexp_desc = Pexp_constraint (
 				{ pexp_desc = Pexp_constant (Pconst_string (jname, None)) },
 				ftype ) })					->
-			let f = name, jname, lazy (unwrap_core_type ftype), mut = Mutable in
+			let f = name, jname, unwrap_core_type ftype, mut = Mutable in
 			if is_static pcf_attributes then `Field_static f else `Field f
 		| Cfk_concrete (Fresh, { pexp_desc = Pexp_constraint (
 				{ pexp_loc = loc }, _ ) })	->
@@ -237,17 +258,13 @@ let unwrap_class_field =
 		end
 
 	| { pcf_desc = Pcf_initializer { pexp_desc =
-			Pexp_constraint ({ pexp_desc = Pexp_ident { txt = Lident name } },
-				ctype) } }	->
-		let rec check_ret_any =
-			function
-			| { ptyp_desc = Ptyp_arrow (_, _, r) }	-> check_ret_any r
-			| { ptyp_desc = Ptyp_any }				-> ()
-			| { ptyp_loc = loc }					->
-				Location.raise_errorf ~loc "Constructor must returns `_'"
-		in
-		check_ret_any ctype;
-		`Constructor (name, lazy (fst (unwrap_method_type ctype)))
+			Pexp_constraint ({ pexp_desc = Pexp_ident { txt = Lident name };
+					pexp_loc = loc}, ctype) } }	->
+		begin match unwrap_method_type ctype with
+		| args, { sigt = { pexp_desc = Pexp_unreachable }}	->
+			`Constructor (name, args)
+		| _ -> Location.raise_errorf ~loc "Constructor must returns `_'"
+		end
 	| { pcf_desc = Pcf_initializer { pexp_desc = Pexp_constraint (
 			{ pexp_loc = loc }, _) } }	->
 		Location.raise_errorf ~loc "Expecting constructor name"
@@ -259,8 +276,6 @@ let unwrap_class_field =
 (** Returns the tuple (class name, java class name, fields)
 		where fields is
 			[`Method (meth_name, java_name, lazy (args, ret types))]
-		Oups: Types are `lazy` so that classes are added to `known_classes`
-			before parsing them. errors may be raised later...
 	Raises `Invalid_argument` if the class is not formatted correctly *)
 let unwrap_class =
 	function
@@ -287,9 +302,6 @@ let gen_func args body =
 	List.fold_right (fun arg body ->
 		Exp.fun_ Nolabel None (Pat.var (mk_loc arg)) body
 	) args body
-
-let mk_let id expr = [%stri let [%p Pat.var (mk_loc id)] = [%e expr]]
-let mk_cstr s = Exp.constant (Const.string s)
 
 let gen_class (class_name, java_name, fields) =
 	let globals, add_global =
@@ -323,23 +335,20 @@ let gen_class (class_name, java_name, fields) =
 
 		List.fold_right (fun field items ->
 		match field with
-		| `Method (name, jname, sigt)			->
-			let args, ret as sigt = Lazy.force sigt in
+		| `Method (name, jname, (args, ret as sigt))		->
 			let mid = add_global (`Method (jname, sigt)) in
 			gen_method name args
 				(fun body -> [%expr (fun obj -> [%e body])])
 				(ret.call mid)
 			:: items
 
-		| `Method_static (name, jname, sigt)	->
-			let args, ret as sigt = Lazy.force sigt in
+		| `Method_static (name, jname, (args, ret as sigt))	->
 			let mid = add_global (`Method (jname, sigt)) in
 			gen_method name args (wrap_no_args args)
 				(ret.call_static mid)
 			:: items
 
 		| `Field (name, jname, ti, mut)			->
-			let ti = Lazy.force ti in
 			let fid = add_global (`Field (jname, ti)) in
 			gen_field name mut
 				[%expr (fun obj -> [%e ti.read_field fid])]
@@ -347,7 +356,6 @@ let gen_class (class_name, java_name, fields) =
 			@ items
 
 		| `Field_static (name, jname, ti, mut)	->
-			let ti = Lazy.force ti in
 			let fid = add_global (`Field_static (jname, ti)) in
 			gen_field name mut
 				[%expr (fun obj -> [%e ti.read_field_static fid])]
@@ -355,7 +363,6 @@ let gen_class (class_name, java_name, fields) =
 			@ items
 
 		| `Constructor (name, args)				->
-			let args = Lazy.force args in
 			let cid = add_global (`Constructor args) in
 			gen_method name args (wrap_no_args args)
 				[%expr Java.new_ __cls [%e mk_ident [ cid ]]]
@@ -367,19 +374,22 @@ let gen_class (class_name, java_name, fields) =
 	let items = List.fold_left (fun items (id, g) ->
 		let expr = match g with
 			| `Method (name, sigt)			->
-				let name, sigt = mk_cstr name, mk_cstr (jni_meth_sigt sigt) in
+				let name = mk_cstr name
+				and sigt = opti_string_concat (jni_meth_sigt sigt) in
 				[%expr Jclass.get_meth __cls [%e name] [%e sigt]]
 			| `Method_static (name, sigt)	->
-				let name, sigt = mk_cstr name, mk_cstr (jni_meth_sigt sigt) in
+				let name = mk_cstr name
+				and sigt = opti_string_concat (jni_meth_sigt sigt) in
 				[%expr Jclass.get_meth_static __cls [%e name] [%e sigt]]
 			| `Field (name, ti)				->
-				let name, ti = mk_cstr name, mk_cstr ti.sigt in
-				[%expr Jclass.get_field __cls [%e name] [%e ti]]
+				let name = mk_cstr name in
+				[%expr Jclass.get_field __cls [%e name] [%e ti.sigt]]
 			| `Field_static (name, ti)		->
-				let name, ti = mk_cstr name, mk_cstr ti.sigt in
-				[%expr Jclass.get_field_static __cls [%e name] [%e ti]]
+				let name = mk_cstr name in
+				[%expr Jclass.get_field_static __cls [%e name] [%e ti.sigt]]
 			| `Constructor args				->
-				let sigt = mk_cstr ("(" ^ concat_sigt args ^ ")V") in
+				let sigt = opti_string_concat
+					[%expr "(" ^ [%e concat_sigt args] ^ ")V"] in
 				[%expr Jclass.get_constructor __cls [%e sigt]]
 		in
 		mk_let id expr :: items
@@ -389,8 +399,9 @@ let gen_class (class_name, java_name, fields) =
 	let items = [
 		[%stri type t];
 
-		[%stri let __cls = Jclass.find_class
-			[%e mk_cstr (java_class_fmt java_name)]];
+		[%stri let __class_name = [%e mk_cstr (java_class_fmt java_name)]];
+
+		[%stri let __cls = Jclass.find_class __class_name];
 
 		[%stri external to_obj : t -> Java.obj = "%identity"];
 
@@ -403,7 +414,7 @@ let gen_class (class_name, java_name, fields) =
 
 	] @ items in
 
-	let mn = module_name class_name in
+	let mn = String.capitalize_ascii class_name in
 	Mb.mk (mk_loc mn) (Mod.structure items)
 
 (* Mapper *)
@@ -414,7 +425,6 @@ let structure_item mapper =
 			{ pstr_desc = Pstr_class [ cls ] }
 		]), _) }	->
 		let cls = unwrap_class cls in
-		add_known_class cls;
 		Str.module_ (gen_class cls)
 	| item			-> default_mapper.structure_item mapper item
 

@@ -19,6 +19,7 @@ object
 	method d : test -> test = "d"
 	method e : test option -> test option = "e"
 	method [@static] f : test -> unit = "f"
+	method [@static] g : Abc.def -> Ghi.Jkl.mno -> pqr = "g"
 
 	initializer (create_default : _)
 	initializer (create : a -> test value -> int -> _)
