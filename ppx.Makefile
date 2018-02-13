@@ -11,24 +11,27 @@ PACKAGES = -package ppx_tools.metaquot
 OCAMLFIND = ocamlfind
 OCAMLC = $(OCAMLFIND) ocamlc $(PACKAGES) -linkall
 
-OCAMLCFLAGS = -I +compiler-libs ocamlcommon.cma
+OCAMLCFLAGS = -I +compiler-libs ocamlcommon.cma -I $(B)
 
-# -
+all: $(T)/ocaml-java-ppx
 
-CMO_FILES = $(B)/ppx.cmo
-
-$(B)/ppx.cmo: ppx/ppx.ml | $(B)
-
-clean::
-	rm -f $(CMO_FILES)
+CMO_FILES = \
+	$(B)/ast_tools.cmo \
+	$(B)/type_info.cmo \
+	$(B)/gen.cmo \
+	$(B)/unwrap.cmo \
+	$(B)/mapper.cmo
 
 $(T)/ocaml-java-ppx: $(CMO_FILES)
 	$(OCAMLC) $(OCAMLCFLAGS) $^ -o $@
 
-%.cmo:
+$(B)/%.cmo: ppx/%.ml | $(B)
 	$(OCAMLC) $(OCAMLCFLAGS) -c $< -o $@
+
+clean::
+	rm -f $(CMO_FILES)
 
 $(sort $(B) $(T)):
 	mkdir -p $@
 
-.PHONY: clean
+.PHONY: all clean
