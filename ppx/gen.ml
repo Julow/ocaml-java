@@ -4,6 +4,8 @@ open Ast_helper
 open Ast_tools
 open Type_info
 
+(** Generates the module for a class (see `class_` below) *)
+
 let rec module_name =
 	function
 	| Ldot (l, r)	-> Ldot (l, String.capitalize_ascii r)
@@ -31,23 +33,24 @@ let field_impl name mut read write =
 	and setter = mk_let ("set'" ^ name) write in
 	if mut then [ getter; setter ] else [ getter ]
 
+(* Global (lookup of class handles, methods and fields ids) *)
 let global =
 	function
-	| `Method (name, sigt)			->
+	| `GMethod (name, sigt)			->
 		let name = mk_cstr name
 		and sigt = opti_string_concat (Type_info.meth_sigt sigt) in
 		[%expr Jclass.get_meth __cls [%e name] [%e sigt]]
-	| `Method_static (name, sigt)	->
+	| `GMethod_static (name, sigt)	->
 		let name = mk_cstr name
 		and sigt = opti_string_concat (Type_info.meth_sigt sigt) in
 		[%expr Jclass.get_meth_static __cls [%e name] [%e sigt]]
-	| `Field (name, ti)				->
+	| `GField (name, ti)			->
 		let name = mk_cstr name in
 		[%expr Jclass.get_field __cls [%e name] [%e ti.sigt]]
-	| `Field_static (name, ti)		->
+	| `GField_static (name, ti)		->
 		let name = mk_cstr name in
 		[%expr Jclass.get_field_static __cls [%e name] [%e ti.sigt]]
-	| `Constructor args				->
+	| `GConstructor args			->
 		let sigt = opti_string_concat
 			[%expr "(" ^ [%e concat_sigt args] ^ ")V"] in
 		[%expr Jclass.get_constructor __cls [%e sigt]]
@@ -56,12 +59,17 @@ let global =
 let sigt_item =
 	let wrap_no_args args t =
 		if args = [] then [%type: unit -> [%t t]] else t
+	and ret_type =
+		function
+		| `Void		-> [%type: unit]
+		| `Ret ti	-> ti.type_
 	in
 	function
 	| `Method (name, _, (args, ret))		->
-		[ meth_sigt name args (fun t -> [%type: t -> [%t t]]) ret.type_ ]
+		let wrap t = [%type: t -> [%t t]] in
+		[ meth_sigt name args wrap (ret_type ret) ]
 	| `Method_static (name, _, (args, ret))	->
-		[ meth_sigt name args (wrap_no_args args) ret.type_ ]
+		[ meth_sigt name args (wrap_no_args args) (ret_type ret) ]
 	| `Field (name, jname, ti, mut)			->
 		field_sigt name mut
 			[%type: t -> [%t ti.type_]]
@@ -75,11 +83,7 @@ let sigt_item =
 
 (* Generates signature *)
 let class_sigt fields =
-	let items = List.fold_right (fun field items ->
-		sigt_item field @ items
-	) fields [] in
-
-	let items = [
+	Mty.signature @@ [
 
 		[%sigi: type t];
 
@@ -91,46 +95,53 @@ let class_sigt fields =
 
 		[%sigi: val of_obj : Java.obj -> t];
 
-	] @ items in
-
-	Mty.signature items
+	]
+	@ List.fold_right (fun field items -> sigt_item field @ items) fields []
 
 (* Implementation *)
 let impl_item =
 	let wrap_no_args args body =
 		if args = [] then [%expr (fun () -> [%e body])] else body
 	in
+	let meth_call static ret mid =
+		let mide = mk_ident [ mid ] in
+		match static, ret with
+		| false, `Void		-> [%expr Java.call_void (to_obj obj) [%e mide ]]
+		| true, `Void		-> [%expr Java.call_static_void __cls [%e mide ]]
+		| false, `Ret ti	-> ti.call mid
+		| true, `Ret ti		-> ti.call_static mid
+	in
 	fun add_global ->
 	function
 	| `Method (name, jname, (args, ret as sigt))		->
-		let mid = add_global (`Method (jname, sigt)) in
-		[ meth_impl name args
-			(fun body -> [%expr (fun obj -> [%e body])])
-			(ret.call mid) ]
+		let mid = add_global (`GMethod (jname, sigt)) in
+		let wrap body = [%expr (fun obj -> [%e body])] in
+		[ meth_impl name args wrap (meth_call false ret mid) ]
 
 	| `Method_static (name, jname, (args, ret as sigt))	->
-		let mid = add_global (`Method_static (jname, sigt)) in
-		[ meth_impl name args (wrap_no_args args) (ret.call_static mid) ]
+		let mid = add_global (`GMethod_static (jname, sigt)) in
+		[ meth_impl name args (wrap_no_args args) (meth_call true ret mid) ]
 
 	| `Field (name, jname, ti, mut)			->
-		let fid = add_global (`Field (jname, ti)) in
+		let fid = add_global (`GField (jname, ti)) in
 		field_impl name mut
 			[%expr (fun obj -> [%e ti.read_field fid])]
 			[%expr (fun obj v -> [%e ti.write_field fid])]
 
 	| `Field_static (name, jname, ti, mut)	->
-		let fid = add_global (`Field_static (jname, ti)) in
+		let fid = add_global (`GField_static (jname, ti)) in
 		field_impl name mut
 			[%expr (fun () -> [%e ti.read_field_static fid])]
 			[%expr (fun v -> [%e ti.write_field_static fid])]
 
 	| `Constructor (name, args)				->
-		let cid = add_global (`Constructor args) in
+		let cid = add_global (`GConstructor args) in
 		[ meth_impl name args (wrap_no_args args)
 			[%expr of_obj_unsafe (Java.new_ __cls [%e mk_ident [ cid ]])] ]
 
 (* Generates implementation *)
 let class_impl path_name fields =
+	(* Use a ref to receive globals from `impl_item` and alloc an id *)
 	let globals, add_global =
 		let globals, count = ref [], ref 0 in
 		globals, fun g ->
@@ -140,14 +151,17 @@ let class_impl path_name fields =
 			id
 	in
 
+	(* Items *)
 	let items = List.fold_right (fun field items ->
 		impl_item add_global field @ items
 	) fields [] in
 
+	(* Globals *)
 	let items = List.fold_left (fun items (id, g) ->
 		mk_let id (global g) :: items
 	) items !globals in
 
+	(* Intro *)
 	let class_name = mk_cstr path_name in
 	let items = [
 		[%stri type t];

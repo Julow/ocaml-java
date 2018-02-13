@@ -8,25 +8,25 @@
 [%%ocaml.error ;;"Constructor must returns `_'"
   ;;""]
 # error_field_any.ml
-[%%ocaml.error ;;"`_' cannot be used here"
+[%%ocaml.error ;;"Unsupported type"
   ;;""]
 # error_field_missing_type.ml
 [%%ocaml.error ;;"Expecting field type"
   ;;""]
 # error_field_unit.ml
-[%%ocaml.error ;;"unit can only be a return type"
+[%%ocaml.error ;;"This type cannot be used here"
   ;;""]
 # error_field_unsupported_type.ml
 [%%ocaml.error ;;"Unsupported type"
   ;;""]
 # error_meth_any_arg.ml
-[%%ocaml.error ;;"`_' cannot be used here"
+[%%ocaml.error ;;"Unsupported type"
   ;;""]
 # error_meth_any_return.ml
-[%%ocaml.error ;;"`_' cannot be used here"
+[%%ocaml.error ;;"Unsupported type"
   ;;""]
 # error_meth_any_return_2.ml
-[%%ocaml.error ;;"`_' cannot be used here"
+[%%ocaml.error ;;"Unsupported type"
   ;;""]
 # error_missing_classpath.ml
 [%%ocaml.error ;;"Expecting Java class path"
@@ -50,7 +50,7 @@
 [%%ocaml.error ;;"self is not allowed"
   ;;""]
 # error_unit_arg.ml
-[%%ocaml.error ;;"unit can only be a return type"
+[%%ocaml.error ;;"This type cannot be used here"
   ;;""]
 # error_virtual.ml
 [%%ocaml.error ;;"Virtual method"
@@ -59,15 +59,16 @@
 module A :
   sig
     type t
-    val __class_name : string
+    val __class_name : unit -> string
     external to_obj : t -> Java.obj = "%identity"
+    external of_obj_unsafe : Java.obj -> t = "%identity"
     val of_obj : Java.obj -> t
     val a : t -> unit
   end =
   struct
     type t
-    let __class_name = "a/A"
-    let __cls = Jclass.find_class __class_name
+    let __class_name () = "a/A"
+    let __cls = Jclass.find_class "a/A"
     external to_obj : t -> Java.obj = "%identity"
     external of_obj_unsafe : Java.obj -> t = "%identity"
     let of_obj obj =
@@ -80,8 +81,9 @@ module A :
 module Test :
   sig
     type t
-    val __class_name : string
+    val __class_name : unit -> string
     external to_obj : t -> Java.obj = "%identity"
+    external of_obj_unsafe : Java.obj -> t = "%identity"
     val of_obj : Java.obj -> t
     val get'a : t -> A.t
     val get'b : t -> test option option
@@ -114,8 +116,8 @@ module Test :
   end =
   struct
     type t
-    let __class_name = "test/Test"
-    let __cls = Jclass.find_class __class_name
+    let __class_name () = "test/Test"
+    let __cls = Jclass.find_class "test/Test"
     external to_obj : t -> Java.obj = "%identity"
     external of_obj_unsafe : Java.obj -> t = "%identity"
     let of_obj obj =
@@ -124,33 +126,28 @@ module Test :
       else failwith "of_obj"
     let __0 =
       Jclass.get_constructor __cls
-        ("(L" ^ (A.__class_name ^ ";Ljuloo/javacaml/Value;I)V"))
+        ("(L" ^ ((A.__class_name ()) ^ ";Ljuloo/javacaml/Value;I)V"))
     let __1 = Jclass.get_constructor __cls "()V"
     let __2 =
       Jclass.get_meth_static __cls "g"
         ("(L" ^
-           (Abc.Def.__class_name ^
+           ((Abc.Def.__class_name ()) ^
               (";L" ^
-                 (Ghi.Jkl.Mno.__class_name ^
-                    (";)L" ^ (Pqr.__class_name ^ ";"))))))
-    let __3 =
-      Jclass.get_meth_static __cls "f" ("(L" ^ (__class_name ^ ";)V"))
-    let __4 =
-      Jclass.get_meth __cls "e"
-        ("(L" ^ (__class_name ^ (";)L" ^ (__class_name ^ ";"))))
-    let __5 =
-      Jclass.get_meth __cls "d"
-        ("(L" ^ (__class_name ^ (";)L" ^ (__class_name ^ ";"))))
+                 ((Ghi.Jkl.Mno.__class_name ()) ^
+                    (";)L" ^ ((Pqr.__class_name ()) ^ ";"))))))
+    let __3 = Jclass.get_meth_static __cls "f" "(Ltest/Test;)V"
+    let __4 = Jclass.get_meth __cls "e" "(Ltest/Test;)Ltest/Test;"
+    let __5 = Jclass.get_meth __cls "d" "(Ltest/Test;)Ltest/Test;"
     let __6 =
       Jclass.get_meth __cls "c"
         "(IZBSIJCFDLjava/lang/String;Ljava/lang/String;Ljuloo/javacaml/Value;Ljuloo/javacaml/Value;)V"
     let __7 = Jclass.get_meth __cls "b" "()V"
     let __8 =
       Jclass.get_meth __cls "a"
-        ("(L" ^ (A.__class_name ^ (";)L" ^ (A.__class_name ^ ";"))))
+        ("(L" ^ ((A.__class_name ()) ^ (";)L" ^ ((A.__class_name ()) ^ ";"))))
     let __9 = Jclass.get_field_static __cls "c" "I"
     let __10 = Jclass.get_field __cls "b" "Ljuloo/javacaml/Value;"
-    let __11 = Jclass.get_field __cls "a" ("L" ^ (A.__class_name ^ ";"))
+    let __11 = Jclass.get_field __cls "a" ("L" ^ ((A.__class_name ()) ^ ";"))
     let get'a obj =
       let r = Java.read_field_object (to_obj obj) __11 in
       if r == Java.null then failwith "null obj" else A.of_obj_unsafe r
@@ -203,43 +200,17 @@ module Test :
 module rec
   String_builder:sig
                    type t
-                   val __class_name : string
+                   val __class_name : unit -> string
                    external to_obj : t -> Java.obj = "%identity"
+                   external of_obj_unsafe : Java.obj -> t = "%identity"
                    val of_obj : Java.obj -> t
                    val create : unit -> t
-                   val to_string : t -> _string.t
+                   val to_string : t -> Jstring.t
                  end =
   struct
     type t
-    let __class_name = "java/lang/StringBuilder"
-    let __cls = Jclass.find_class __class_name
-    external to_obj : t -> Java.obj = "%identity"
-    external of_obj_unsafe : Java.obj -> t = "%identity"
-    let of_obj obj =
-      if Java.instanceof obj __cls
-      then of_obj_unsafe obj
-      else failwith "of_obj"
-    let __0 =
-      Jclass.get_meth __cls "toString" ("()L" ^ (_string.__class_name ^ ";"))
-    let __1 = Jclass.get_constructor __cls "()V"
-    let create () = of_obj_unsafe (Java.new_ __cls __1)
-    let to_string obj =
-      let r = Java.call_object (to_obj obj) __0 in
-      if r == Java.null then failwith "null obj" else _string.of_obj_unsafe r
-  end
- and
-  _string:sig
-            type t
-            val __class_name : string
-            external to_obj : t -> Java.obj = "%identity"
-            val of_obj : Java.obj -> t
-            val of_builder : String_builder.t -> t
-            val to_string : t -> string
-          end =
-  struct
-    type t
-    let __class_name = "java/lang/String"
-    let __cls = Jclass.find_class __class_name
+    let __class_name () = "java/lang/StringBuilder"
+    let __cls = Jclass.find_class "java/lang/StringBuilder"
     external to_obj : t -> Java.obj = "%identity"
     external of_obj_unsafe : Java.obj -> t = "%identity"
     let of_obj obj =
@@ -247,11 +218,66 @@ module rec
       then of_obj_unsafe obj
       else failwith "of_obj"
     let __0 = Jclass.get_meth __cls "toString" "()Ljava/lang/String;"
-    let __1 =
-      Jclass.get_constructor __cls
-        ("(L" ^ (String_builder.__class_name ^ ";)V"))
+    let __1 = Jclass.get_constructor __cls "()V"
+    let create () = of_obj_unsafe (Java.new_ __cls __1)
+    let to_string obj =
+      let r = Java.call_object (to_obj obj) __0 in
+      if r == Java.null then failwith "null obj" else Jstring.of_obj_unsafe r
+  end
+ and
+  Jstring:sig
+            type t
+            val __class_name : unit -> string
+            external to_obj : t -> Java.obj = "%identity"
+            external of_obj_unsafe : Java.obj -> t = "%identity"
+            val of_obj : Java.obj -> t
+            val of_builder : String_builder.t -> t
+            val to_string : t -> string
+          end =
+  struct
+    type t
+    let __class_name () = "java/lang/String"
+    let __cls = Jclass.find_class "java/lang/String"
+    external to_obj : t -> Java.obj = "%identity"
+    external of_obj_unsafe : Java.obj -> t = "%identity"
+    let of_obj obj =
+      if Java.instanceof obj __cls
+      then of_obj_unsafe obj
+      else failwith "of_obj"
+    let __0 = Jclass.get_meth __cls "toString" "()Ljava/lang/String;"
+    let __1 = Jclass.get_constructor __cls "(Ljava/lang/StringBuilder;)V"
     let of_builder x0 =
       Java.push_object (String_builder.to_obj x0);
       of_obj_unsafe (Java.new_ __cls __1)
     let to_string obj = Java.call_string (to_obj obj) __0
   end
+module Jfloat :
+  sig
+    type t
+    val __class_name : unit -> string
+    external to_obj : t -> Java.obj = "%identity"
+    external of_obj_unsafe : Java.obj -> t = "%identity"
+    val of_obj : Java.obj -> t
+    val float_value : t -> float
+    val of_string : Jstring.t -> t
+  end =
+  struct
+    type t
+    let __class_name () = "java/lang/Float"
+    let __cls = Jclass.find_class "java/lang/Float"
+    external to_obj : t -> Java.obj = "%identity"
+    external of_obj_unsafe : Java.obj -> t = "%identity"
+    let of_obj obj =
+      if Java.instanceof obj __cls
+      then of_obj_unsafe obj
+      else failwith "of_obj"
+    let __0 =
+      Jclass.get_meth_static __cls "valueOf"
+        ("(L" ^ ((Jstring.__class_name ()) ^ ";)Ljava/lang/Float;"))
+    let __1 = Jclass.get_meth __cls "floatValue" "()F"
+    let float_value obj = Java.call_float (to_obj obj) __1
+    let of_string x0 =
+      Java.push_object (Jstring.to_obj x0);
+      (let r = Java.call_static_object __cls __0 in
+       if r == Java.null then failwith "null obj" else of_obj_unsafe r)
+  end 

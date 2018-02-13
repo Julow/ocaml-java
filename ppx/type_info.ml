@@ -2,7 +2,7 @@ open Parsetree
 open Ast_tools
 
 (* Most expressions expect `obj`, `__cls` and `to_obj` to be defined *)
-type type_info = {
+type t = {
 	sigt : expression;
 	type_ : core_type;
 	push : string -> expression;
@@ -48,4 +48,8 @@ let rec concat_sigt =
 
 (** Returns the method signature *)
 let meth_sigt (args, ret) =
-	[%expr "(" ^ [%e concat_sigt args] ^ ")" ^ [%e ret.sigt]]
+	let ret = match ret with
+		| `Void		-> mk_cstr "V"
+		| `Ret ti	-> ti.sigt
+	in
+	[%expr "(" ^ [%e concat_sigt args] ^ ")" ^ [%e ret]]
