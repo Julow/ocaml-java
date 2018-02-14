@@ -25,6 +25,7 @@ val create_double : int -> jdouble t
 val create_string : int -> string t
 val create_object : Java.jclass -> Java.obj -> int -> Java.obj t
 val create_value : int -> 'a jvalue t
+val create_array : Java.jclass -> 'a t option -> int -> 'a t t
 
 (** Returns the length of an array *)
 external length : 'a t -> int = "ocaml_java__jarray_length"
@@ -46,6 +47,7 @@ val set_object : Java.obj t -> int -> Java.obj -> unit
 val set_value : 'a jvalue t -> int -> 'a -> unit
 val set_value_opt : 'a jvalue t -> int -> 'a option -> unit
 val set_array : 'a t t -> int -> 'a t -> unit
+val set_array_opt : 'a t t -> int -> 'a option t -> unit
 
 (** Retrieve an element
 	Raises `Invalid_argument` if the index is out of bounds
@@ -66,6 +68,7 @@ val get_object : Java.obj t -> int -> Java.obj
 val get_value : 'a jvalue t -> int -> 'a
 val get_value_opt : 'a jvalue t -> int -> 'a option
 val get_array : 'a t t -> int -> 'a t
+val get_array_opt : 'a t t -> int -> 'a option t
 
 (** Unsafe convertion from/to `Java.obj`
 	Raises `Failure` if the object is null *)

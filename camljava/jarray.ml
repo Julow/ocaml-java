@@ -18,6 +18,8 @@ external create_string : int -> string t = "ocaml_java__jarray_create_string"
 external create_object : Java.jclass -> Java.obj -> int -> Java.obj t
 	= "ocaml_java__jarray_create_object"
 external create_value : int -> 'a jvalue t = "ocaml_java__jarray_create_value"
+external create_array : Java.jclass -> 'a t option -> int -> 'a t t
+	= "ocaml_java__jarray_create_array"
 
 external length : 'a t -> int = "ocaml_java__jarray_length"
 
@@ -51,6 +53,8 @@ external set_value_opt : 'a jvalue t -> int -> 'a option -> unit
 	= "ocaml_java__jarray_set_value_opt"
 external set_array : 'a t t -> int -> 'a t -> unit
 	= "ocaml_java__jarray_set_array"
+external set_array_opt : 'a t t -> int -> 'a option t -> unit
+	= "ocaml_java__jarray_set_array_opt"
 
 external get_int : int t -> int -> int = "ocaml_java__jarray_get_int"
 external get_bool : bool t -> int -> bool = "ocaml_java__jarray_get_bool"
@@ -73,6 +77,8 @@ external get_value_opt : 'a jvalue t -> int -> 'a option
 	= "ocaml_java__jarray_get_value_opt"
 external get_array : 'a t t -> int -> 'a t
 	= "ocaml_java__jarray_get_array"
+external get_array_opt : 'a t t -> int -> 'a option t
+	= "ocaml_java__jarray_get_array_opt"
 
 external _of_obj : Java.obj -> 'a t = "%identity"
 let of_obj obj =

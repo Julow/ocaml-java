@@ -379,6 +379,16 @@ static value conv_of_value_opt(jobject v)
 	CAMLreturn(copy_some(jvalue));
 }
 
+static value conv_of_array_opt(jarray a)
+{
+	CAMLparam0();
+	CAMLlocal1(v);
+	if (IS_NULL(env, a)) CAMLreturn(Val_none);
+	v = alloc_java_obj(env, a);
+	(*env)->DeleteLocalRef(env, a);
+	CAMLreturn(copy_some(v));
+}
+
 static value conv_of_obj(jobject obj)
 {
 	value v;
@@ -418,6 +428,13 @@ static jobject conv_to_value_opt(value opt)
 	return conv_to_value(Some_val(opt));
 }
 
+static jarray conv_to_array_opt(value opt)
+{
+	if (opt == Val_none)
+		return NULL;
+	return Java_obj_val(Some_val(opt));
+}
+
 // Calls `GEN` for each primitive types:
 //  int, bool, byte, short, int32, long, char, float, double
 // with params:
@@ -446,7 +463,8 @@ static jobject conv_to_value_opt(value opt)
 	GEN(object,		Object,		jobject,	conv_of_obj,		l,	Java_obj_val_opt) \
 	GEN(value,		Object,		jobject,	conv_of_value,		l,	conv_to_value) \
 	GEN(value_opt,	Object,		jobject,	conv_of_value_opt,	l,	conv_to_value_opt) \
-	GEN(array,		Object,		jarray,		conv_of_array,		l,	Java_obj_val)
+	GEN(array,		Object,		jarray,		conv_of_array,		l,	Java_obj_val) \
+	GEN(array_opt,	Object,		jarray,		conv_of_array_opt,	l,	conv_to_array_opt)
 
 // `GEN_PRIM` and `GEN_OBJ`
 #define GEN(GEN) \
@@ -656,6 +674,12 @@ value ocaml_java__jarray_create_value(value length)
 	v = new_object_array(value_cls, NULL, Long_val(length));
 	(*env)->DeleteLocalRef(env, value_cls);
 	return v;
+}
+
+value ocaml_java__jarray_create_array(value cls, value obj, value length)
+{
+	jobject const obj_ = (obj == Val_none) ? NULL : Java_obj_val(Some_val(obj));
+	return new_object_array(Java_obj_val(cls), obj_, Long_val(length));
 }
 
 value ocaml_java__jarray_length(value array)

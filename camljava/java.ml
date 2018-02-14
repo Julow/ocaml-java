@@ -66,6 +66,8 @@ external push_value_opt : 'a option -> unit
 	= "ocaml_java__push_value_opt" [@@noalloc]
 external push_array : 'a jarray -> unit
 	= "ocaml_java__push_array" [@@noalloc]
+external push_array_opt : 'a jarray option -> unit
+	= "ocaml_java__push_array_opt" [@@noalloc]
 
 external call_void : obj -> meth -> unit = "ocaml_java__call_void"
 external call_int : obj -> meth -> int = "ocaml_java__call_int"
@@ -86,6 +88,8 @@ external call_value_opt : obj -> meth -> 'a option
 	= "ocaml_java__call_value_opt"
 external call_array : obj -> meth -> 'a jarray
 	= "ocaml_java__call_array"
+external call_array_opt : obj -> meth -> 'a jarray option
+	= "ocaml_java__call_array_opt"
 
 external call_static_void : jclass -> meth_static -> unit
 	= "ocaml_java__call_static_void"
@@ -119,6 +123,8 @@ external call_static_value_opt : jclass -> meth_static -> 'a option
 	= "ocaml_java__call_static_value_opt"
 external call_static_array : jclass -> meth_static -> 'a jarray
 	= "ocaml_java__call_static_array"
+external call_static_array_opt : jclass -> meth_static -> 'a jarray option
+	= "ocaml_java__call_static_array_opt"
 
 external call_nonvirtual_void : obj -> jclass -> meth -> unit
 	= "ocaml_java__call_nonvirtual_void"
@@ -152,6 +158,8 @@ external call_nonvirtual_value_opt : obj -> jclass -> meth -> 'a option
 	= "ocaml_java__call_nonvirtual_value_opt"
 external call_nonvirtual_array : obj -> jclass -> meth -> 'a jarray
 	= "ocaml_java__call_nonvirtual_array"
+external call_nonvirtual_array_opt : obj -> jclass -> meth -> 'a jarray option
+	= "ocaml_java__call_nonvirtual_array_opt"
 
 external read_field_int : obj -> field -> int
 	= "ocaml_java__read_field_int"
@@ -183,6 +191,8 @@ external read_field_value_opt : obj -> field -> 'a option
 	= "ocaml_java__read_field_value_opt"
 external read_field_array : obj -> field -> 'a jarray
 	= "ocaml_java__read_field_array"
+external read_field_array_opt : obj -> field -> 'a jarray option
+	= "ocaml_java__read_field_array_opt"
 
 external read_field_static_int : jclass -> field_static -> int
 	= "ocaml_java__read_field_static_int" [@@noalloc]
@@ -214,6 +224,8 @@ external read_field_static_value_opt : jclass -> field_static -> 'a option
 	= "ocaml_java__read_field_static_value_opt"
 external read_field_static_array : jclass -> field_static -> 'a jarray
 	= "ocaml_java__read_field_static_array"
+external read_field_static_array_opt : jclass -> field_static -> 'a jarray option
+	= "ocaml_java__read_field_static_array_opt"
 
 external write_field_int : obj -> field -> int -> unit
 	= "ocaml_java__write_field_int"
@@ -245,6 +257,8 @@ external write_field_value_opt : obj -> field -> 'a option -> unit
 	= "ocaml_java__write_field_value_opt"
 external write_field_array : obj -> field -> 'a jarray -> unit
 	= "ocaml_java__write_field_array"
+external write_field_array_opt : obj -> field -> 'a jarray option -> unit
+	= "ocaml_java__write_field_array_opt"
 
 external write_field_static_int : jclass -> field_static -> int -> unit
 	= "ocaml_java__write_field_static_int" [@@noalloc]
@@ -276,3 +290,5 @@ external write_field_static_value_opt : jclass -> field_static -> 'a option -> u
 	= "ocaml_java__write_field_static_value_opt" [@@noalloc]
 external write_field_static_array : jclass -> field_static -> 'a jarray -> unit
 	= "ocaml_java__write_field_static_array" [@@noalloc]
+external write_field_static_array_opt : jclass -> field_static -> 'a jarray option -> unit
+	= "ocaml_java__write_field_static_array_opt" [@@noalloc]
