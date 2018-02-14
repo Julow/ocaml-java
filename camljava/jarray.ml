@@ -15,7 +15,7 @@ external create_char : int -> char t = "ocaml_java__jarray_create_char"
 external create_float : int -> float t = "ocaml_java__jarray_create_float"
 external create_double : int -> jdouble t = "ocaml_java__jarray_create_double"
 external create_string : int -> string t = "ocaml_java__jarray_create_string"
-external create_object : Java.jclass -> Java.obj -> int -> Java.obj t
+external create_object : Java.jclass -> _ Java.obj -> int -> _ Java.obj t
 	= "ocaml_java__jarray_create_object"
 external create_value : int -> 'a jvalue t = "ocaml_java__jarray_create_value"
 external create_array : Java.jclass -> 'a t option -> int -> 'a t t
@@ -45,7 +45,7 @@ external set_string : string t -> int -> string -> unit
 	= "ocaml_java__jarray_set_string"
 external set_string_opt : string t -> int -> string option -> unit
 	= "ocaml_java__jarray_set_string_opt"
-external set_object : Java.obj t -> int -> Java.obj -> unit
+external set_object : _ Java.obj t -> int -> _ Java.obj -> unit
 	= "ocaml_java__jarray_set_object"
 external set_value : 'a jvalue t -> int -> 'a -> unit
 	= "ocaml_java__jarray_set_value"
@@ -70,7 +70,7 @@ external get_string : string t -> int -> string
 	= "ocaml_java__jarray_get_string"
 external get_string_opt : string t -> int -> string option
 	= "ocaml_java__jarray_get_string_opt"
-external get_object : Java.obj t -> int -> Java.obj
+external get_object : _ Java.obj t -> int -> _ Java.obj
 	= "ocaml_java__jarray_get_object"
 external get_value : 'a jvalue t -> int -> 'a = "ocaml_java__jarray_get_value"
 external get_value_opt : 'a jvalue t -> int -> 'a option
@@ -80,9 +80,9 @@ external get_array : 'a t t -> int -> 'a t
 external get_array_opt : 'a t t -> int -> 'a option t
 	= "ocaml_java__jarray_get_array_opt"
 
-external _of_obj : Java.obj -> 'a t = "%identity"
+external _of_obj : _ Java.obj -> 'a t = "%identity"
 let of_obj obj =
 	if obj == Java.null then failwith "Jarray.of_obj: null";
 	_of_obj obj
 
-external to_obj : 'a t -> Java.obj = "%identity"
+external to_obj : 'a t -> _ Java.obj = "%identity"

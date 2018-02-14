@@ -23,7 +23,7 @@ val create_char : int -> char t
 val create_float : int -> float t
 val create_double : int -> jdouble t
 val create_string : int -> string t
-val create_object : Java.jclass -> Java.obj -> int -> Java.obj t
+val create_object : Java.jclass -> 'a Java.obj -> int -> 'b Java.obj t
 val create_value : int -> 'a jvalue t
 val create_array : Java.jclass -> 'a t option -> int -> 'a t t
 
@@ -43,7 +43,7 @@ val set_float : float t -> int -> float -> unit
 val set_double : jdouble t -> int -> float -> unit
 val set_string : string t -> int -> string -> unit
 val set_string_opt : string t -> int -> string option -> unit
-val set_object : Java.obj t -> int -> Java.obj -> unit
+val set_object : 'a Java.obj t -> int -> 'b Java.obj -> unit
 val set_value : 'a jvalue t -> int -> 'a -> unit
 val set_value_opt : 'a jvalue t -> int -> 'a option -> unit
 val set_array : 'a t t -> int -> 'a t -> unit
@@ -64,7 +64,7 @@ val get_float : float t -> int -> float
 val get_double : jdouble t -> int -> float
 val get_string : string t -> int -> string
 val get_string_opt : string t -> int -> string option
-val get_object : Java.obj t -> int -> Java.obj
+val get_object : 'a Java.obj t -> int -> 'b Java.obj
 val get_value : 'a jvalue t -> int -> 'a
 val get_value_opt : 'a jvalue t -> int -> 'a option
 val get_array : 'a t t -> int -> 'a t
@@ -72,5 +72,5 @@ val get_array_opt : 'a t t -> int -> 'a option t
 
 (** Unsafe convertion from/to `Java.obj`
 	Raises `Failure` if the object is null *)
-val of_obj : Java.obj -> 'a t
-val to_obj : 'a t -> Java.obj
+val of_obj : 'a Java.obj -> 'b t
+val to_obj : 'a t -> 'b Java.obj

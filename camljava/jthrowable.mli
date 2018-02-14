@@ -11,7 +11,7 @@ val throw : t -> 'a
 val throw_new : Jclass.t -> string -> 'a
 
 (** Convert to an obj *)
-val to_obj : t -> Java.obj
+val to_obj : t -> 'a Java.obj
 
 (** Some Throwable methods *)
 

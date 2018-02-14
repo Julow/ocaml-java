@@ -2,8 +2,9 @@
 	Unsafe *)
 
 (** Represent a java object
+	The `'a` (phantom) parameter is to embed custom types
 	Does not support hash and marshalling *)
-type obj
+type 'a obj
 
 (** Java array
 	See the `Jarray` module *)
@@ -38,13 +39,13 @@ exception Exception of jthrowable
 val init : string array -> unit
 
 (** The null value *)
-val null : obj
+val null : 'a obj
 
 (** `instanceof o cls`
 	Returns `true` if `o` is an instance of the class `cls`
 	and is not `null`
 	or `false` otherwise *)
-external instanceof : obj -> jclass -> bool
+external instanceof : 'a obj -> jclass -> bool
 	= "ocaml_java__instanceof" [@@noalloc]
 
 (** `sameobject a b`
@@ -52,18 +53,18 @@ external instanceof : obj -> jclass -> bool
 	Not the same as `(=)` because `(=)` only compare references
 	while many difference references may point to the same object
 	(eg. global or weak references) *)
-external sameobject : obj -> obj -> bool
+external sameobject : 'a obj -> 'b obj -> bool
 	= "ocaml_java__sameobject" [@@noalloc]
 
 (** Returns the class of an object
 	Raises `Failure` if the object is `null` *)
-val objectclass : obj -> jclass
+val objectclass : 'a obj -> jclass
 
 (** Instantiate a new object
 	Assume enough argument are in the calling stack (see `push`)
 	Raises `Exception` if the constructor thrown a Java exception
 	May crash for the same reason as `call` *)
-val new_ : jclass -> meth_constructor -> obj
+val new_ : jclass -> meth_constructor -> 'a obj
 
 (** Convertions
 	-
@@ -101,7 +102,7 @@ external push_double : (float [@unboxed]) -> unit
 external push_string : string -> unit = "ocaml_java__push_string" [@@noalloc]
 external push_string_opt : string option -> unit
 	= "ocaml_java__push_string_opt" [@@noalloc]
-external push_object : obj -> unit = "ocaml_java__push_object" [@@noalloc]
+external push_object : 'a obj -> unit = "ocaml_java__push_object" [@@noalloc]
 external push_value : 'a -> unit = "ocaml_java__push_value" [@@noalloc]
 external push_value_opt : 'a option -> unit
 	= "ocaml_java__push_value_opt" [@@noalloc]
@@ -114,25 +115,25 @@ external push_array_opt : 'a jarray option -> unit
 	Raises `Failure` if the object is null
 	Raises `Exception` if the method throws a Java exception
 	May crash if some argument are missing or have the wrong representation *)
-val call_void : obj -> meth -> unit
-val call_int : obj -> meth -> int
-val call_bool : obj -> meth -> bool
-val call_byte : obj -> meth -> int
-val call_short : obj -> meth -> int
-val call_int32 : obj -> meth -> int32
-val call_long : obj -> meth -> int64
-val call_char : obj -> meth -> char
-val call_float : obj -> meth -> float
-val call_double : obj -> meth -> float
+val call_void : 'a obj -> meth -> unit
+val call_int : 'a obj -> meth -> int
+val call_bool : 'a obj -> meth -> bool
+val call_byte : 'a obj -> meth -> int
+val call_short : 'a obj -> meth -> int
+val call_int32 : 'a obj -> meth -> int32
+val call_long : 'a obj -> meth -> int64
+val call_char : 'a obj -> meth -> char
+val call_float : 'a obj -> meth -> float
+val call_double : 'a obj -> meth -> float
 (** Raises `Failure` if the result is null *)
-val call_string : obj -> meth -> string
-val call_string_opt : obj -> meth -> string option
-val call_object : obj -> meth -> obj
+val call_string : 'a obj -> meth -> string
+val call_string_opt : 'a obj -> meth -> string option
+val call_object : 'a obj -> meth -> 'b obj
 (** Raises `Failure` if the result is null *)
-val call_value : obj -> meth -> 'a
-val call_value_opt : obj -> meth -> 'a option
-val call_array : obj -> meth -> 'a jarray
-val call_array_opt : obj -> meth -> 'a jarray option
+val call_value : 'a obj -> meth -> 'b
+val call_value_opt : 'a obj -> meth -> 'b option
+val call_array : 'a obj -> meth -> 'b jarray
+val call_array_opt : 'a obj -> meth -> 'b jarray option
 
 (** Same as `call`, for static methods *)
 val call_static_void : jclass -> meth_static -> unit
@@ -147,7 +148,7 @@ val call_static_float : jclass -> meth_static -> float
 val call_static_double : jclass -> meth_static -> float
 val call_static_string : jclass -> meth_static -> string
 val call_static_string_opt : jclass -> meth_static -> string option
-val call_static_object : jclass -> meth_static -> obj
+val call_static_object : jclass -> meth_static -> 'a obj
 val call_static_value : jclass -> meth_static -> 'a
 val call_static_value_opt : jclass -> meth_static -> 'a option
 val call_static_array : jclass -> meth_static -> 'a jarray
@@ -155,44 +156,44 @@ val call_static_array_opt : jclass -> meth_static -> 'a jarray option
 
 (** Same as `call`, for non-virtual call
 	Call the method of a specific class instead of the class of the object *)
-val call_nonvirtual_void : obj -> jclass -> meth -> unit
-val call_nonvirtual_int : obj -> jclass -> meth -> int
-val call_nonvirtual_bool : obj -> jclass -> meth -> bool
-val call_nonvirtual_byte : obj -> jclass -> meth -> int
-val call_nonvirtual_short : obj -> jclass -> meth -> int
-val call_nonvirtual_int32 : obj -> jclass -> meth -> int32
-val call_nonvirtual_long : obj -> jclass -> meth -> int64
-val call_nonvirtual_char : obj -> jclass -> meth -> char
-val call_nonvirtual_float : obj -> jclass -> meth -> float
-val call_nonvirtual_double : obj -> jclass -> meth -> float
-val call_nonvirtual_string : obj -> jclass -> meth -> string
-val call_nonvirtual_string_opt : obj -> jclass -> meth -> string option
-val call_nonvirtual_object : obj -> jclass -> meth -> obj
-val call_nonvirtual_value : obj -> jclass -> meth -> 'a
-val call_nonvirtual_value_opt : obj -> jclass -> meth -> 'a option
-val call_nonvirtual_array : obj -> jclass -> meth -> 'a jarray
-val call_nonvirtual_array_opt : obj -> jclass -> meth -> 'a jarray option
+val call_nonvirtual_void : 'a obj -> jclass -> meth -> unit
+val call_nonvirtual_int : 'a obj -> jclass -> meth -> int
+val call_nonvirtual_bool : 'a obj -> jclass -> meth -> bool
+val call_nonvirtual_byte : 'a obj -> jclass -> meth -> int
+val call_nonvirtual_short : 'a obj -> jclass -> meth -> int
+val call_nonvirtual_int32 : 'a obj -> jclass -> meth -> int32
+val call_nonvirtual_long : 'a obj -> jclass -> meth -> int64
+val call_nonvirtual_char : 'a obj -> jclass -> meth -> char
+val call_nonvirtual_float : 'a obj -> jclass -> meth -> float
+val call_nonvirtual_double : 'a obj -> jclass -> meth -> float
+val call_nonvirtual_string : 'a obj -> jclass -> meth -> string
+val call_nonvirtual_string_opt : 'a obj -> jclass -> meth -> string option
+val call_nonvirtual_object : 'a obj -> jclass -> meth -> 'b obj
+val call_nonvirtual_value : 'a obj -> jclass -> meth -> 'b
+val call_nonvirtual_value_opt : 'a obj -> jclass -> meth -> 'b option
+val call_nonvirtual_array : 'a obj -> jclass -> meth -> 'b jarray
+val call_nonvirtual_array_opt : 'a obj -> jclass -> meth -> 'b jarray option
 
 (** Read the value of a field
 	May crash if the representation is incorrect *)
-val read_field_int : obj -> field -> int
-val read_field_bool : obj -> field -> bool
-val read_field_byte : obj -> field -> int
-val read_field_short : obj -> field -> int
-val read_field_int32 : obj -> field -> int32
-val read_field_long : obj -> field -> int64
-val read_field_char : obj -> field -> char
-val read_field_float : obj -> field -> float
-val read_field_double : obj -> field -> float
+val read_field_int : 'a obj -> field -> int
+val read_field_bool : 'a obj -> field -> bool
+val read_field_byte : 'a obj -> field -> int
+val read_field_short : 'a obj -> field -> int
+val read_field_int32 : 'a obj -> field -> int32
+val read_field_long : 'a obj -> field -> int64
+val read_field_char : 'a obj -> field -> char
+val read_field_float : 'a obj -> field -> float
+val read_field_double : 'a obj -> field -> float
 (** Raises `Failure` if the value is `null` *)
-val read_field_string : obj -> field -> string
-val read_field_string_opt : obj -> field -> string option
-val read_field_object : obj -> field -> obj
+val read_field_string : 'a obj -> field -> string
+val read_field_string_opt : 'a obj -> field -> string option
+val read_field_object : 'a obj -> field -> 'b obj
 (** Raises `Failure` if the value is `null` *)
-val read_field_value : obj -> field -> 'a
-val read_field_value_opt : obj -> field -> 'a option
-val read_field_array : obj -> field -> 'a jarray
-val read_field_array_opt : obj -> field -> 'a jarray option
+val read_field_value : 'a obj -> field -> 'b
+val read_field_value_opt : 'a obj -> field -> 'b option
+val read_field_array : 'a obj -> field -> 'b jarray
+val read_field_array_opt : 'a obj -> field -> 'b jarray option
 
 (** Same as `read_field`, for static fields *)
 val read_field_static_int : jclass -> field_static -> int
@@ -207,7 +208,7 @@ val read_field_static_double : jclass -> field_static -> float
 (** Raises `Failure` if the value is `null` *)
 val read_field_static_string : jclass -> field_static -> string
 val read_field_static_string_opt : jclass -> field_static -> string option
-val read_field_static_object : jclass -> field_static -> obj
+val read_field_static_object : jclass -> field_static -> 'a obj
 (** Raises `Failure` if the value is `null` *)
 val read_field_static_value : jclass -> field_static -> 'a
 val read_field_static_value_opt : jclass -> field_static -> 'a option
@@ -215,22 +216,22 @@ val read_field_static_array : jclass -> field_static -> 'a jarray
 val read_field_static_array_opt : jclass -> field_static -> 'a jarray option
 
 (** Write to a field *)
-val write_field_int : obj -> field -> int -> unit
-val write_field_bool : obj -> field -> bool -> unit
-val write_field_byte : obj -> field -> int -> unit
-val write_field_short : obj -> field -> int -> unit
-val write_field_int32 : obj -> field -> int32 -> unit
-val write_field_long : obj -> field -> int64 -> unit
-val write_field_char : obj -> field -> char -> unit
-val write_field_float : obj -> field -> float -> unit
-val write_field_double : obj -> field -> float -> unit
-val write_field_string : obj -> field -> string -> unit
-val write_field_string_opt : obj -> field -> string option -> unit
-val write_field_object : obj -> field -> obj -> unit
-val write_field_value : obj -> field -> 'a -> unit
-val write_field_value_opt : obj -> field -> 'a option -> unit
-val write_field_array : obj -> field -> 'a jarray -> unit
-val write_field_array_opt : obj -> field -> 'a jarray option -> unit
+val write_field_int : 'a obj -> field -> int -> unit
+val write_field_bool : 'a obj -> field -> bool -> unit
+val write_field_byte : 'a obj -> field -> int -> unit
+val write_field_short : 'a obj -> field -> int -> unit
+val write_field_int32 : 'a obj -> field -> int32 -> unit
+val write_field_long : 'a obj -> field -> int64 -> unit
+val write_field_char : 'a obj -> field -> char -> unit
+val write_field_float : 'a obj -> field -> float -> unit
+val write_field_double : 'a obj -> field -> float -> unit
+val write_field_string : 'a obj -> field -> string -> unit
+val write_field_string_opt : 'a obj -> field -> string option -> unit
+val write_field_object : 'a obj -> field -> 'b obj -> unit
+val write_field_value : 'a obj -> field -> 'b -> unit
+val write_field_value_opt : 'a obj -> field -> 'b option -> unit
+val write_field_array : 'a obj -> field -> 'b jarray -> unit
+val write_field_array_opt : 'a obj -> field -> 'b jarray option -> unit
 
 (** Same as `write_field`, for static fields *)
 val write_field_static_int : jclass -> field_static -> int -> unit
@@ -244,7 +245,7 @@ val write_field_static_float : jclass -> field_static -> float -> unit
 val write_field_static_double : jclass -> field_static -> float -> unit
 val write_field_static_string : jclass -> field_static -> string -> unit
 val write_field_static_string_opt : jclass -> field_static -> string option -> unit
-val write_field_static_object : jclass -> field_static -> obj -> unit
+val write_field_static_object : jclass -> field_static -> 'a obj -> unit
 val write_field_static_value : jclass -> field_static -> 'a -> unit
 val write_field_static_value_opt : jclass -> field_static -> 'a option -> unit
 val write_field_static_array : jclass -> field_static -> 'a jarray -> unit

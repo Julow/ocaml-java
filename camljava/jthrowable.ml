@@ -15,7 +15,7 @@ let throw_new cls msg =
 	_throw_new cls msg;
 	raise Throwing
 
-external to_obj : t -> Java.obj = "%identity"
+external to_obj : t -> _ Java.obj = "%identity"
 
 type api = {
 	get_localized_message : Java.meth;
