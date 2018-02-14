@@ -1,7 +1,7 @@
 open Parsetree
 open Ast_tools
 
-(* Most expressions expect `obj`, `__cls` and `to_obj` to be defined *)
+(* Most expressions expect `obj` and `__cls` to be defined *)
 type t = {
 	sigt : expression;
 	type_ : core_type;
@@ -22,13 +22,13 @@ let create ~push ~call ~call_static ~read_field ~write_field
 	let push arg =
 		[%expr [%e push] ([%e conv_to (mk_ident [ arg ])])]
 	and call mid =
-		conv_of [%expr [%e call] (to_obj obj) [%e mk_ident [ mid ]]]
+		conv_of [%expr [%e call] obj [%e mk_ident [ mid ]]]
 	and call_static mid =
 		conv_of [%expr [%e call_static] __cls [%e mk_ident [ mid ]]]
 	and read_field fid =
-		conv_of [%expr [%e read_field] (to_obj obj) [%e mk_ident [ fid ]]]
+		conv_of [%expr [%e read_field] obj [%e mk_ident [ fid ]]]
 	and write_field fid =
-		[%expr [%e write_field] (to_obj obj) [%e mk_ident [ fid ]]
+		[%expr [%e write_field] obj [%e mk_ident [ fid ]]
 			[%e conv_to [%expr v]]]
 	and read_field_static fid =
 		conv_of [%expr [%e read_field_static] __cls [%e mk_ident [ fid ]]]

@@ -43,7 +43,7 @@ let class_field =
 				{ pexp_desc = Pexp_constant (Pconst_string (jname, None)) },
 				Some mtype) })				->
 			let static = is_static pcf_attributes in
-			`Method (name, jname, method_type mtype, static)
+			[], [ `Method (name, jname, method_type mtype, static) ]
 		| Cfk_concrete (Fresh, { pexp_desc = Pexp_poly (
 				{ pexp_loc = loc }, _) })	->
 			Location.raise_errorf ~loc "Expecting Java method name"
@@ -63,7 +63,7 @@ let class_field =
 				{ pexp_desc = Pexp_constant (Pconst_string (jname, None)) },
 				ftype ) })					->
 			let static = is_static pcf_attributes in
-			`Field (name, jname, ftype, mut = Mutable, static)
+			[], [ `Field (name, jname, ftype, mut = Mutable, static) ]
 		| Cfk_concrete (Fresh, { pexp_desc = Pexp_constraint (
 				{ pexp_loc = loc }, _ ) })	->
 			Location.raise_errorf ~loc "Expecting Java field name"
@@ -80,7 +80,7 @@ let class_field =
 			Pexp_constraint ({ pexp_desc = Pexp_ident { txt = Lident name };
 					pexp_loc = loc}, ctype) } }	->
 		begin match method_type ctype with
-		| args, { ptyp_desc = Ptyp_any } -> `Constructor (name, args)
+		| args, { ptyp_desc = Ptyp_any } -> [], [ `Constructor (name, args) ]
 		| _ -> Location.raise_errorf ~loc "Constructor must returns `_'"
 		end
 	| { pcf_desc = Pcf_initializer { pexp_desc = Pexp_constraint (
@@ -88,6 +88,16 @@ let class_field =
 		Location.raise_errorf ~loc "Expecting constructor name"
 	| { pcf_desc = Pcf_initializer { pexp_loc = loc } }	->
 		Location.raise_errorf ~loc "Expecting constructor"
+
+	| { pcf_desc = Pcf_inherit (Fresh, { pcl_desc =
+			Pcl_constr ({ txt = id }, []) }, None) } ->
+		[ id ], []
+	| { pcf_desc = Pcf_inherit (Fresh, { pcl_loc = loc }, None) } ->
+		Location.raise_errorf ~loc "Expecting class name"
+	| { pcf_desc = Pcf_inherit (Fresh, _, Some { loc }) } ->
+		Location.raise_errorf ~loc "Unsupported syntax"
+	| { pcf_desc = Pcf_inherit (Override, _, _); pcf_loc = loc } ->
+		Location.raise_errorf ~loc "Override inherit"
 
 	| { pcf_loc = loc } -> Location.raise_errorf ~loc "Unsupported"
 
@@ -101,10 +111,12 @@ let class_ =
 				{ ppat_desc = Ppat_constant (Pconst_string (java_path, None)) },
 				{ pcl_desc = Pcl_structure {
 					pcstr_self = { ppat_desc = Ppat_any };
-					pcstr_fields } }) } } ->
-		class_name,
-		java_path,
-		List.map class_field pcstr_fields
+					pcstr_fields = fields } }) } } ->
+		let supers, fields = List.fold_right (fun field (s, f) ->
+			let s', f' = class_field field in
+			s' @ s, f' @ f
+		) fields ([], []) in
+		class_name, java_path, supers, fields
 	| { pci_expr = { pcl_desc = Pcl_fun (_, _, _, { pcl_desc = Pcl_structure {
 				pcstr_self = { ppat_desc; ppat_loc = loc }
 			}})} } when ppat_desc <> Ppat_any ->

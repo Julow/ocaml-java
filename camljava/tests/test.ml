@@ -268,47 +268,41 @@ end
 module Java_lang =
 struct
 
-	class%java string_builder "java.lang.StringBuilder" =
+	class%java jobject "java.lang.Object" =
 	object
+		method equals : jobject -> bool = "equals"
+		method to_string : jstring = "toString"
+	end
 
+	and string_builder "java.lang.StringBuilder" =
+	object
+		inherit jobject
 		initializer (create : _)
-
 		method append_char : char -> string_builder = "append"
 		method append_int : int -> string_builder = "append"
 		method append_string : string -> string_builder = "append"
-
-		method to_string : jstring = "toString"
-
 	end
 
 	and jstring "java.lang.String" =
 	object
-
+		inherit jobject
 		initializer (create : string -> _)
 		initializer (empty : _)
 		initializer (of_builder : string_builder -> _)
-
 		method char_at : int -> char = "charAt"
-
 		method [@static] of_bool : bool -> jstring = "valueOf"
 		method [@static] of_int : int -> jstring = "valueOf"
 		method [@static] of_char : char -> jstring = "valueOf"
-
 		method to_string : string = "toString"
-
 	end
 
 	class%java jfloat "java.lang.Float" =
 	object
-
+		inherit jobject
 		initializer (create : double -> _)
-
 		method to_string : string = "toString"
-
 		method float_value : float = "floatValue"
-
 		method [@static] of_string : jstring -> jfloat = "valueOf"
-
 	end
 
 end
@@ -335,9 +329,10 @@ let test_ppx () =
 	ignore (String_builder.append_char builder '0');
 	ignore (String_builder.append_string builder ".4");
 	ignore (String_builder.append_int builder 2);
-	let str = String_builder.to_string builder in
+	let str = Jobject.to_string builder in
 	assert (Jstring.char_at str 0 = '0');
 	assert (Jstring.to_string str = "0.42");
+	assert (Jobject.equals str (Jstring.create "0.42"));
 	assert (Jstring.to_string (Jstring.of_bool true) = "true");
 	assert (Jstring.to_string (Jstring.of_int 783213) = "783213");
 	assert (Jstring.to_string (Jstring.of_char '`') = "`");

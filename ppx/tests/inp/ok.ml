@@ -6,6 +6,10 @@ end
 class%java test "test.Test" =
 object
 
+	inherit a
+	inherit b
+	inherit c
+
 	val a : a = "a"
 	val mutable b : test option value option = "b"
 	val [@static] mutable c : int = "c"
@@ -17,13 +21,13 @@ object
 		-> (a * b -> c) value -> (a b c * [> `D of e]) value option
 		-> unit = "c"
 	method d : test -> test = "d"
-	method e : test option -> test option = "e"
 	method [@static] f : test -> unit = "f"
 	method [@static] g : Abc.def -> Ghi.Jkl.mno -> pqr = "g"
 
-	method h : int array -> int array array option -> Java.obj array = "h"
+	method h : int array -> int array array option -> int Java.obj array = "h"
 	method i : int array value array array array array option
 		-> byte array -> short array option -> double array array = "i"
+	method j : _ Java.obj -> int = "j"
 
 	initializer (create_default : _)
 	initializer (create : a -> test value -> int -> _)

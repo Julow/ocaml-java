@@ -66,14 +66,14 @@ let sigt_item =
 	in
 	function
 	| `Method (name, _, (args, ret))		->
-		let wrap t = [%type: t -> [%t t]] in
+		let wrap t = [%type: _ t' -> [%t t]] in
 		[ meth_sigt name args wrap (ret_type ret) ]
 	| `Method_static (name, _, (args, ret))	->
 		[ meth_sigt name args (wrap_no_args args) (ret_type ret) ]
 	| `Field (name, jname, ti, mut)			->
 		field_sigt name mut
-			[%type: t -> [%t ti.type_]]
-			[%type: t -> [%t ti.type_] -> unit]
+			[%type: _ t' -> [%t ti.type_]]
+			[%type: _ t' -> [%t ti.type_] -> unit]
 	| `Field_static (name, jname, ti, mut)	->
 		field_sigt name mut
 			[%type: unit -> [%t ti.type_]]
@@ -82,18 +82,16 @@ let sigt_item =
 		[ meth_sigt name args (wrap_no_args args) [%type: t] ]
 
 (* Generates signature *)
-let class_sigt fields =
+let class_sigt class_variants fields =
 	Mty.signature @@ [
 
-		[%sigi: type t];
+		[%sigi: type c = [%t class_variants]];
+		[%sigi: type 'a t' = ([> c] as 'a) Java.obj];
+		[%sigi: type t = c Java.obj];
 
 		[%sigi: val __class_name : unit -> string];
 
-		[%sigi: external to_obj : t -> Java.obj = "%identity"];
-
-		[%sigi: external of_obj_unsafe : Java.obj -> t = "%identity"];
-
-		[%sigi: val of_obj : Java.obj -> t];
+		[%sigi: val of_obj : 'a Java.obj -> t];
 
 	]
 	@ List.fold_right (fun field items -> sigt_item field @ items) fields []
@@ -106,7 +104,7 @@ let impl_item =
 	let meth_call static ret mid =
 		let mide = mk_ident [ mid ] in
 		match static, ret with
-		| false, `Void		-> [%expr Java.call_void (to_obj obj) [%e mide ]]
+		| false, `Void		-> [%expr Java.call_void obj [%e mide ]]
 		| true, `Void		-> [%expr Java.call_static_void __cls [%e mide ]]
 		| false, `Ret ti	-> ti.call mid
 		| true, `Ret ti		-> ti.call_static mid
@@ -137,10 +135,10 @@ let impl_item =
 	| `Constructor (name, args)				->
 		let cid = add_global (`GConstructor args) in
 		[ meth_impl name args (wrap_no_args args)
-			[%expr of_obj_unsafe (Java.new_ __cls [%e mk_ident [ cid ]])] ]
+			[%expr Java.new_ __cls [%e mk_ident [ cid ]]] ]
 
 (* Generates implementation *)
-let class_impl path_name fields =
+let class_impl path_name class_variants fields =
 	(* Use a ref to receive globals from `impl_item` and alloc an id *)
 	let globals, add_global =
 		let globals, count = ref [], ref 0 in
@@ -164,15 +162,16 @@ let class_impl path_name fields =
 	(* Intro *)
 	let class_name = mk_cstr path_name in
 	let items = [
-		[%stri type t];
+
+		[%stri type c = [%t class_variants]];
+		[%stri type 'a t' = ([> c] as 'a) Java.obj];
+		[%stri type t = c Java.obj];
 
 		[%stri let __class_name () = [%e class_name]];
 
 		[%stri let __cls = Jclass.find_class [%e class_name]];
 
-		[%stri external to_obj : t -> Java.obj = "%identity"];
-
-		[%stri external of_obj_unsafe : Java.obj -> t = "%identity"];
+		[%stri external of_obj_unsafe : 'a Java.obj -> t = "%identity"];
 
 		[%stri let of_obj obj =
 			if Java.instanceof obj __cls
@@ -184,8 +183,8 @@ let class_impl path_name fields =
 	Mod.structure items
 
 (* Module sigt and impl *)
-let class_ class_name path_name fields =
-	let impl = class_impl path_name fields
-	and sigt = class_sigt fields in
+let class_ class_name path_name class_variants fields =
+	let impl = class_impl path_name class_variants fields
+	and sigt = class_sigt class_variants fields in
 	let mn = String.capitalize_ascii class_name in
 	Mb.mk (mk_loc mn) (Mod.constraint_ impl sigt)
