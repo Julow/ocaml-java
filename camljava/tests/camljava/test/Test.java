@@ -100,7 +100,6 @@ public class Test
 	public Object	test_attr_object;
 	public Value	test_attr_value;
 
-
 	public static int		test_static_int = 1;
 	public static float		test_static_float = 2.0f;
 	public static double	test_static_double = 3.0;
@@ -158,5 +157,25 @@ public class Test
 		Caml.argUnit();
 		test_const_value = Caml.callValue();
 		test_static_value = test_const_value;
+	}
+
+	public static int[][]	test_array_array;
+
+	public static void		set_array_array(int[][] a)
+	{
+		test_array_array = a;
+	}
+
+	public static int[][]	get_array_array()
+	{
+		return test_array_array;
+	}
+
+	public static int		sum(int[] a)
+	{
+		int sum = 0;
+		for (int i = 0; i < a.length; i++)
+			sum += a[i];
+		return sum;
 	}
 }

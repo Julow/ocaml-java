@@ -9,8 +9,9 @@ open Ast_tools
 	`class_name` and `java_path` are used to generate different signature
 	for the current class and `rec_classes` for mutually recursive classes
 	Raises a location error if the type is not supported *)
-let translate_type class_name java_path rec_classes =
-	let ti sigt suffix type_ conv_to conv_of =
+let rec translate_type class_name java_path rec_classes =
+	let no_conv expr = expr in
+	let type_info ?(conv_to=no_conv) ?(conv_of=no_conv) sigt suffix type_ =
 		let id prefix = mk_dot (Lident "Java") (prefix ^ suffix) in
 		Type_info.create
 			~push:(id "push_")
@@ -25,11 +26,27 @@ let translate_type class_name java_path rec_classes =
 
 	let ti_class mn java_path type_ conv_to conv_of =
 		let sigt = [%expr "L" ^ [%e java_path] ^ ";"] in
-		ti sigt "object" type_ conv_to conv_of
+		type_info ~conv_to ~conv_of sigt "object" type_
 
-	and ti sigt suffix type_ =
-		let no_conv expr = expr in
-		ti (mk_cstr sigt) suffix type_ no_conv no_conv
+	and ti sigt suffix type_ = type_info (mk_cstr sigt) suffix type_ in
+
+	let rec ti_array t =
+		let open Type_info in
+		let t = ti_array_transl t in
+		let sigt = [%expr "[" ^ [%e t.sigt]] in
+		type_info sigt "array" [%type: [%t t.type_] Jarray.t]
+
+	and ti_array_transl =
+		function
+		| [%type: byte]				-> ti "B" "byte" [%type: Jarray.jbyte]
+		| [%type: short]			-> ti "S" "short" [%type: Jarray.jshort]
+		| [%type: double]			-> ti "D" "double" [%type: Jarray.jdouble]
+		| [%type: [%t? t] value]	->
+			ti "Ljuloo/javacaml/Value;" "value" [%type: [%t t] Jarray.jvalue]
+		| [%type: [%t? t] array]	-> ti_array t
+		| [%type: [%t? _] option] as t ->
+			Location.raise_errorf ~loc:t.ptyp_loc "Unsupported type"
+		| t -> translate_type class_name java_path rec_classes t
 	in
 
 	let mn =
@@ -49,9 +66,21 @@ let translate_type class_name java_path rec_classes =
 
 	function
 	| ([%type: unit]
+	| [%type: int option]
+	| [%type: bool option]
+	| [%type: byte option]
+	| [%type: short option]
+	| [%type: int32 option]
+	| [%type: long option]
+	| [%type: char option]
+	| [%type: float option]
+	| [%type: double option]
+	| [%type: Java.obj option]
 	| [%type: value]
 	| [%type: value option]
-	| [%type: option]) as t			->
+	| [%type: option]
+	| [%type: array]
+	| [%type: array option]) as t	->
 		(* Disable a few types that should not be valid class names *)
 		Location.raise_errorf ~loc:t.ptyp_loc "This type cannot be used here"
 	| [%type: int] as t				-> ti "I" "int" t
@@ -69,6 +98,10 @@ let translate_type class_name java_path rec_classes =
 	| [%type: [%t? t] value option]	->
 		ti "Ljuloo/javacaml/Value;" "value_opt" [%type: [%t t] option]
 	| [%type: Java.obj] as t		-> ti "Ljava/lang/Object;" "object" t
+	| [%type: [%t? t] array]		-> ti_array t
+	| [%type: [%t? t] array option]	->
+		let t = ti_array t in
+		type_info t.sigt "array_opt" [%type: [%t t.type_] option]
 
 	| [%type: [%t? { ptyp_desc = Ptyp_constr ({ txt = id }, []) }]] ->
 		let mn, java_path = mn id in

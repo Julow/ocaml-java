@@ -258,6 +258,11 @@ object
 	val [@static] mutable test_f : int = "test_f"
 	method [@static] test_static : int -> int = "test"
 
+	val [@static] mutable array_array : int array array option = "test_array_array"
+	method [@static] set_array_array : int array array -> unit = "set_array_array"
+	method [@static] get_array_array : int array array = "get_array_array"
+	method [@static] sum : int array -> int = "sum"
+
 end
 
 module Java_lang =
@@ -338,6 +343,26 @@ let test_ppx () =
 	assert (Jstring.to_string (Jstring.of_char '`') = "`");
 	let flt = Jfloat.of_string (Jstring.of_builder builder) in
 	assert (Jfloat.to_string flt = "0.42");
+
+	let len = 10 in
+	let a = Jarray.create_array (Jclass.find_class "[I") None len in
+	for i = 0 to len - 1 do
+		let a' = Jarray.create_int len in
+		for i = 0 to len - 1 do Jarray.set_int a' i (i*2) done;
+		Jarray.set_array a i a'
+	done;
+	assert (Test.get'array_array () = None);
+	begin try ignore (Test.get_array_array ()); assert false with Failure _ -> () end;
+	Test.set_array_array a;
+	begin match Test.get'array_array () with Some _ -> () | None -> assert false end;
+	let sums = Jarray.create_int len in
+	for i = 0 to len - 1 do
+		let a = Jarray.get_array a i in
+		Jarray.set_int sums i (Test.sum a)
+	done;
+	assert (Test.sum sums = 900);
+	Test.set'array_array None;
+
 	()
 
 let () = Callback.register "camljava_do_test" test

@@ -14,10 +14,10 @@ all: | libs
 
 ML_FILES = $(JAVACAML_TESTS_DIR)/javacaml_test.ml $(wildcard *.ml)
 
-a.out: $(ML_FILES) $(OCAMLJAVA_DIR)/bin/camljava.cmxa
+a.out: $(ML_FILES) $(OCAMLJAVA_DIR)/bin/camljava/camljava.cmxa
 	ocamlopt \
 		-ppx $(OCAMLJAVA_DIR)/bin/ocaml-java-ppx \
-		-I $(OCAMLJAVA_DIR)/bin camljava.cmxa \
+		-I $(OCAMLJAVA_DIR)/bin/camljava camljava.cmxa \
 		unix.cmxa \
 		-g \
 		$(ML_FILES) -o $@

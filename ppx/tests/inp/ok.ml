@@ -21,6 +21,10 @@ object
 	method [@static] f : test -> unit = "f"
 	method [@static] g : Abc.def -> Ghi.Jkl.mno -> pqr = "g"
 
+	method h : int array -> int array array option -> Java.obj array = "h"
+	method i : int array value array array array array option
+		-> byte array -> short array option -> double array array = "i"
+
 	initializer (create_default : _)
 	initializer (create : a -> test value -> int -> _)
 
