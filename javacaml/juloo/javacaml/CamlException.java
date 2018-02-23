@@ -5,10 +5,12 @@ package juloo.javacaml;
  */
 public class CamlException extends RuntimeException
 {
-	public CamlException(String msg, StackTraceElement[] caml_stack)
+	public CamlException(String msg, Throwable cause, StackTraceElement[] caml_stack)
 	{
 		super("Uncaught OCaml exception: `" + msg + "`");
 		setStackTrace(concat_stacks(caml_stack, getStackTrace()));
+		if (cause != null)
+			initCause(cause);
 	}
 
 	static StackTraceElement[] concat_stacks(StackTraceElement[] a,

@@ -1,8 +1,12 @@
 #ifndef CAMLJAVA_UTILS_H
 # define CAMLJAVA_UTILS_H
 
-#include <caml/mlvalues.h>
+#include <jni.h>
+
+#include <caml/alloc.h>
 #include <caml/custom.h>
+#include <caml/memory.h>
+#include <caml/mlvalues.h>
 
 // Option type
 #define Val_none	Val_long(0)

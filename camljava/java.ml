@@ -24,7 +24,7 @@ let init opts =
 let null = Obj.magic 0
 
 let () =
-	(* Used by javacaml *)
+	(* Used by javacaml to handle uncaught exceptions *)
 	Callback.register "Java.get_ocaml_backtraces" Printexc.(fun () ->
 		match backtrace_slots (get_raw_backtrace ()) with
 		| Some bt	->
@@ -34,6 +34,9 @@ let () =
 				| None		-> ("Unknown location", -1)) bt
 		| None		-> [||]
 	);
+	Callback.register "Java.get_cause" (function
+		| Exception thr	-> Some thr
+		| _				-> None);
 	Callback.register_exception "Java.Exception" (Exception (Obj.magic 0))
 
 external instanceof : _ obj -> jclass -> bool

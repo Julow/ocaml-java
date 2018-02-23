@@ -1,13 +1,15 @@
-#include <stddef.h>
-#include <jni.h>
-#include <caml/mlvalues.h>
-#include <caml/callback.h>
-#include <caml/memory.h>
-#include <caml/alloc.h>
-#include <caml/printexc.h>
-#include <caml/fail.h>
 #include "camljava_utils.h"
 #include "javacaml_utils.h"
+
+#include <jni.h>
+#include <stddef.h>
+
+#include <caml/alloc.h>
+#include <caml/callback.h>
+#include <caml/fail.h>
+#include <caml/memory.h>
+#include <caml/mlvalues.h>
+#include <caml/printexc.h>
 
 static jclass
 	NullPointerException,
@@ -132,6 +134,23 @@ static value get_ocaml_backtrace()
 	return caml_callback(*get_backtrace, Val_unit);
 }
 
+static jobject get_cause(value exn)
+{
+	static value	*get_cause;
+	value			cause_opt;
+
+	if (get_cause == NULL)
+	{
+		get_cause = caml_named_value("Java.get_cause");
+		if (get_cause == NULL)
+			return NULL; // No need to panic
+	}
+	cause_opt = caml_callback(*get_cause, exn);
+	if (cause_opt == Val_none)
+		return NULL;
+	return Java_obj_val(Some_val(cause_opt));
+}
+
 // Throw a CamlException in reaction of `exn`
 // If ExceptionOccurred is set, let it through and do not throw a CamlException
 static void throw_caml_exception(JNIEnv *env, value exn)
@@ -149,7 +168,7 @@ static void throw_caml_exception(JNIEnv *env, value exn)
 	caml_stat_free(_exn_msg);
 	elements = alloc_stack_trace_elements(env, get_ocaml_backtrace());
 	java_exn = (*env)->NewObject(env, CamlException, CamlException_init,
-			exn_msg, elements);
+			exn_msg, get_cause(exn), elements);
 	(*env)->Throw(env, java_exn);
 	(*env)->DeleteLocalRef(env, exn_msg);
 	(*env)->DeleteLocalRef(env, elements);
@@ -368,7 +387,8 @@ static int init_classes(JNIEnv *env)
 	I(Value, "(J)V");
 	F(Value, value, "J");
 	C("juloo/javacaml/", CamlException);
-	I(CamlException, "(Ljava/lang/String;[Ljava/lang/StackTraceElement;)V");
+	I(CamlException, "(Ljava/lang/String;Ljava/lang/Throwable;"
+		"[Ljava/lang/StackTraceElement;)V");
 	C("java/lang/", StackTraceElement);
 	I(StackTraceElement, "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)V");
 	C("juloo/javacaml/", InvalidMethodIdException);
