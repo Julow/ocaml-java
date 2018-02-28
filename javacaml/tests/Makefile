@@ -16,9 +16,10 @@ all: | libs
 
 libtest.so: $(wildcard *.ml *.c) $(CAMLJAVA_TESTS_DIR)/test.ml
 	ocamlfind ocamlopt -linkpkg -output-obj \
+		-ppx $(OCAMLJAVA_DIR)/bin/ocaml-java-ppx \
 		-runtime-variant _pic \
 		-ccopt "-shared" \
-		-I $(OCAMLJAVA_DIR)/bin javacaml.cmxa \
+		-I $(OCAMLJAVA_DIR)/bin/javacaml javacaml.cmxa \
 		unix.cmxa -g \
 		$^ -o $@
 

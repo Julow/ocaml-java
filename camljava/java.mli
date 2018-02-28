@@ -79,7 +79,7 @@ val new_ : jclass -> meth_constructor -> 'a obj
 	| char				| char
 	| float				| float
 	| double			| float
-	| String (non-null)	| string
+	| String (non-null)	| string (encoding: UTF-8)
 	| String			| string option
 	| Object			| Java.obj
 	| Value (non-null)	| 'a

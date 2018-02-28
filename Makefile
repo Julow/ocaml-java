@@ -57,10 +57,6 @@ MAKE_JAR = make -f jar.Makefile \
 $(T)/ocaml-java.jar:
 	$(MAKE_JAR) $@
 
-container:
-	docker build -t ocaml-java - < Dockerfile
-	docker run -it --rm -v"`pwd`:/app" ocaml-java bash
-
 clean:
 	$(MAKE_CAMLJAVA) clean
 	$(MAKE_JAVACAML) clean
@@ -69,4 +65,4 @@ clean:
 re: clean
 	make all
 
-.PHONY: all container clean re $(TARGETS)
+.PHONY: all clean re $(TARGETS)

@@ -109,7 +109,7 @@ static jobjectArray alloc_stack_trace_elements(JNIEnv *env, value locations)
 	for (i = 0; i < loc_count; i++)
 	{
 		loc = Field(locations, i);
-		file_name = (*env)->NewStringUTF(env, String_val(Field(loc, 0)));
+		file_name = ocaml_java__to_jstring(env, Field(loc, 0));
 		elem = (*env)->NewObject(env, StackTraceElement, StackTraceElement_init,
 				unknown_loc, unknown_loc, file_name, Long_val(Field(loc, 1)));
 		(*env)->SetObjectArrayElement(env, elements, i, elem);
@@ -252,7 +252,7 @@ void Java_juloo_javacaml_Caml_arg##NAME(JNIEnv *env, jclass c, TYPE v) \
 #define ARG_TO_UNIT(env, v)		((void)v, Val_unit)
 #define ARG_TO_INT(env, v)		Val_long(v)
 #define ARG_TO_FLOAT(env, v)	caml_copy_double(v)
-#define ARG_TO_STRING(env, v)	CHECK_NULLPTR(env, v, jstring_to_cstring)
+#define ARG_TO_STRING(env, v)	CHECK_NULLPTR(env, v, ocaml_java__of_jstring)
 #define ARG_TO_BOOL(env, v)		Val_bool(v)
 #define ARG_TO_INT32(env, v)	caml_copy_int32(v)
 #define ARG_TO_INT64(env, v)	caml_copy_int64(v)
@@ -303,7 +303,7 @@ TYPE Java_juloo_javacaml_Caml_call##NAME(JNIEnv *env, jclass c) \
 #define CALL_OF_UNIT(env, v)	(void)0
 #define CALL_OF_INT(env, v)		Int_val(v)
 #define CALL_OF_FLOAT(env, v)	Double_val(v)
-#define CALL_OF_STRING(env, v)	(*env)->NewStringUTF(env, String_val(v))
+#define CALL_OF_STRING(env, v)	ocaml_java__to_jstring(env, v)
 #define CALL_OF_BOOL(env, v)	Bool_val(v)
 #define CALL_OF_INT32(env, v)	Int32_val(v)
 #define CALL_OF_INT64(env, v)	Int64_val(v)

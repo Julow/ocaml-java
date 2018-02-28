@@ -23,14 +23,16 @@ a.out: $(ML_FILES) $(OCAMLJAVA_DIR)/bin/camljava/camljava.cmxa
 		$(ML_FILES) -o $@
 
 test.jar: $(wildcard camljava/test/*.java)
-	javac -cp $(OCAMLJAVA_DIR)/bin/ocaml-java.jar $^
+	javac -encoding UTF8 -cp $(OCAMLJAVA_DIR)/bin/ocaml-java.jar $^
 	jar cf $@ camljava/test/*.class
 
 libs:
 	make -C $(OCAMLJAVA_DIR)
+	make -C $(JAVACAML_TESTS_DIR) test.jar
 
 clean:
 	make -C $(OCAMLJAVA_DIR) clean
+	make -C $(JAVACAML_TESTS_DIR) clean
 	rm -f $(wildcard *.o *.cmi *.cmo *.cmx *.jar camljava/test/*.class)
 	rm -f a.out test.jar
 

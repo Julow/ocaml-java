@@ -2,23 +2,20 @@
 # define JAVACAML_UTILS_H
 
 #include <jni.h>
-#include <caml/mlvalues.h>
-#include <caml/memory.h>
+
 #include <caml/alloc.h>
+#include <caml/memory.h>
+#include <caml/mlvalues.h>
 
 // Check if a `jobject` is `null`
 #define IS_NULL(env, OBJ) ((*env)->IsSameObject(env, OBJ, NULL))
 
-// Copy the content of `str` into a new OCaml string
-static value jstring_to_cstring(JNIEnv *env, jstring str)
-{
-	jsize const len = (*env)->GetStringUTFLength(env, str);
-	value cstr;
-
-	cstr = caml_alloc_string(len);
-	(*env)->GetStringUTFRegion(env, str, 0, len, (char*)String_val(cstr));
-	return cstr;
-}
+// Convertion from/to Java string
+// OCaml strings are expected to be UTF-8 encoded strings
+// `ocaml_java__of_jstring` allocs an OCaml string
+// `ocaml_java__to_jstring` returns a local ref
+value ocaml_java__of_jstring(JNIEnv *env, jstring str);
+jstring ocaml_java__to_jstring(JNIEnv *env, value str);
 
 // Returns a new juloo.javacaml.Value pointing to `v`
 jobject ocaml_java__jvalue_new(JNIEnv *env, value v);

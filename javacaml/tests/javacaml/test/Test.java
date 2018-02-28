@@ -197,11 +197,11 @@ public class Test
 		{
 			StackTraceElement[] stack = e.getStackTrace();
 			int[] line_nums = new int[]{ 5, 6, 7, 7, 8, 9 };
-			for (int i = 0; i < 5; i++)
+			for (int i = 0; i < 6; i++)
 			{
 				assert stack[i].getClassName().equals("<OCaml>");
 				assert stack[i].getMethodName().equals("<OCaml>");
-				assert stack[i].getFileName().equals("javacaml_test.ml");
+				assert stack[i].getFileName().contains("javacaml_test.ml");
 				assert stack[i].getLineNumber() == line_nums[i];
 			}
 		}

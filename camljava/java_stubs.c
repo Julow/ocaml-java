@@ -1,13 +1,15 @@
-#include <stddef.h>
-#include <jni.h>
-#include <caml/mlvalues.h>
-#include <caml/callback.h>
-#include <caml/memory.h>
-#include <caml/fail.h>
-#include <caml/custom.h>
-#include <caml/alloc.h>
 #include "camljava_utils.h"
 #include "javacaml_utils.h"
+
+#include <jni.h>
+#include <stddef.h>
+
+#include <caml/alloc.h>
+#include <caml/callback.h>
+#include <caml/custom.h>
+#include <caml/fail.h>
+#include <caml/memory.h>
+#include <caml/mlvalues.h>
 
 #define JNI_VERSION JNI_VERSION_1_4
 
@@ -83,7 +85,7 @@ value ocaml_java__objectclass(value obj)
 
 static value *java_exception = NULL;
 
-static void raise_java_exception(jthrowable exn)
+static value raise_java_exception(jthrowable exn)
 {
 	CAMLparam0();
 	CAMLlocal1(thrbl);
@@ -96,6 +98,7 @@ static void raise_java_exception(jthrowable exn)
 			caml_failwith("camljava not properly linked");
 	}
 	caml_raise_with_arg(*java_exception, thrbl);
+	CAMLreturn(Val_unit);
 }
 
 // Check if a Java exception has been thrown
@@ -334,7 +337,7 @@ static value conv_of_string(jstring str)
 	value v;
 
 	if (IS_NULL(env, str)) caml_failwith("Null string");
-	v = jstring_to_cstring(env, str);
+	v = ocaml_java__of_jstring(env, str);
 	(*env)->DeleteLocalRef(env, str);
 	return v;
 }
@@ -364,7 +367,7 @@ static value conv_of_string_opt(jstring str)
 	CAMLparam0();
 	CAMLlocal1(cstr);
 	if (IS_NULL(env, str)) CAMLreturn(Val_none);
-	cstr = jstring_to_cstring(env, str);
+	cstr = ocaml_java__of_jstring(env, str);
 	(*env)->DeleteLocalRef(env, str);
 	CAMLreturn(copy_some(cstr));
 }
@@ -400,7 +403,7 @@ static value conv_of_obj(jobject obj)
 
 static jobject conv_to_string(value v)
 {
-	jstring const js = (*env)->NewStringUTF(env, String_val(v));
+	jstring const js = ocaml_java__to_jstring(env, v);
 
 	push_local_ref(js);
 	return js;

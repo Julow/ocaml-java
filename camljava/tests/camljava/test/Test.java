@@ -178,4 +178,14 @@ public class Test
 			sum += a[i];
 		return sum;
 	}
+
+	public static String	get_string()
+	{
+		return "!5Aa¥¼ÑñĄąĲĳΎΔδϠ߄ߐ߰ߋ߹᱕ᱝᱰ᱿㐅㒅㝬㿜가뮀윸힣🀀🀍🀒🀝𪜀𪮘𪾀𫜴😁😏✈🚑0⃣";
+	}
+
+	public static String	wrap_string(String s)
+	{
+		return "[" + s + "]";
+	}
 }
