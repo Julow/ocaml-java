@@ -6,12 +6,12 @@
 B = $(BUILD_DIR)
 T = $(TARGET_DIR)
 
-PACKAGES = -package ppx_tools.metaquot
+PACKAGES = -package ppx_tools.metaquot,ocaml-migrate-parsetree
 
 OCAMLFIND = ocamlfind
-OCAMLC = $(OCAMLFIND) ocamlc $(PACKAGES) -linkall
+OCAMLC = $(OCAMLFIND) ocamlc $(PACKAGES) -linkall -linkpkg
 
-OCAMLCFLAGS = -I +compiler-libs ocamlcommon.cma -I $(B)
+OCAMLCFLAGS = -I $(B) -open Migrate_parsetree -open Ast_406
 
 all: $(T)/ocaml-java-ppx
 

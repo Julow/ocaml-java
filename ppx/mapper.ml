@@ -88,8 +88,8 @@ let rec translate_type class_name java_path rec_classes polymorphic =
 	| [%type: [%t? _] Java.obj] as t -> ti "Ljava/lang/Object;" "object" t
 	| [%type: [%t? t] array]		-> ti_array t
 	| [%type: [%t? t] array option]	->
-		let t = ti_array t in
-		type_info t.sigt "array_opt" [%type: [%t t.type_] option]
+		let Type_info.{ sigt; type_ } = ti_array t in
+		type_info sigt "array_opt" [%type: [%t type_] option]
 	| [%type: [%t? { ptyp_desc = Ptyp_constr ({ txt = id }, []) }]] ->
 		let mn, java_path = mn id in
 		let sigt = [%expr "L" ^ [%e java_path] ^ ";"]
@@ -158,6 +158,8 @@ let structure_item mapper =
 		end
 	| item			-> default_mapper.structure_item mapper item
 
-let mapper _ = { default_mapper with structure_item }
+let mapper _ _ = { default_mapper with structure_item }
 
-let () = register "ocaml-java-ppx" mapper
+let () =
+	Driver.register ~name:"ocaml-java-ppx" (module OCaml_406) mapper;
+	Driver.run_as_ppx_rewriter ()

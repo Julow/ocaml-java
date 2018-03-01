@@ -10,7 +10,7 @@ RUN echo y | opam init
 # OCaml
 
 RUN opam switch 4.06.0
-RUN opam install -y ppx_tools
+RUN opam install -y ppx_tools ocaml-migrate-parsetree
 
 # Java
 
