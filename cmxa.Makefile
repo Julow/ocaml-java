@@ -24,17 +24,17 @@ all: $(T)/camljava.cmxa $(T)/javacaml.cmxa
 
 CMX_FILES = $(T)/java.cmx $(T)/jarray.cmx $(T)/jclass.cmx $(T)/jthrowable.cmx
 
-$(B)/java.o $(T)/java.cmx: camljava/java.ml $(T)/java.cmi | $(B) $(T)
-$(T)/java.cmi: camljava/java.mli | $(T)
+$(B)/java.o $(T)/java.cmx: srcs/ml/java.ml $(T)/java.cmi | $(B) $(T)
+$(T)/java.cmi: srcs/ml/java.mli | $(T)
 
-$(B)/jarray.o $(T)/jarray.cmx: camljava/jarray.ml $(T)/jarray.cmi $(T)/java.cmi | $(B) $(T)
-$(T)/jarray.cmi: camljava/jarray.mli | $(T)
+$(B)/jarray.o $(T)/jarray.cmx: srcs/ml/jarray.ml $(T)/jarray.cmi $(T)/java.cmi | $(B) $(T)
+$(T)/jarray.cmi: srcs/ml/jarray.mli | $(T)
 
-$(B)/jclass.o $(T)/jclass.cmx: camljava/jclass.ml $(T)/jclass.cmi $(T)/java.cmi | $(B) $(T)
-$(T)/jclass.cmi: camljava/jclass.mli | $(T)
+$(B)/jclass.o $(T)/jclass.cmx: srcs/ml/jclass.ml $(T)/jclass.cmi $(T)/java.cmi | $(B) $(T)
+$(T)/jclass.cmi: srcs/ml/jclass.mli | $(T)
 
-$(B)/jthrowable.o $(T)/jthrowable.cmx: camljava/jthrowable.ml $(T)/jthrowable.cmi $(T)/java.cmi | $(B) $(T)
-$(T)/jthrowable.cmi: camljava/jthrowable.mli | $(T)
+$(B)/jthrowable.o $(T)/jthrowable.cmx: srcs/ml/jthrowable.ml $(T)/jthrowable.cmi $(T)/java.cmi | $(B) $(T)
+$(T)/jthrowable.cmi: srcs/ml/jthrowable.mli | $(T)
 
 clean::
 	rm -f $(B)/java.o $(T)/java.cmx $(T)/java.cmi
@@ -44,9 +44,9 @@ clean::
 
 OBJ_FILES = $(B)/java_stubs.o $(B)/caml.o $(B)/string_convertions.o
 
-$(B)/java_stubs.o: camljava/java_stubs.c | $(B)
-$(B)/caml.o: javacaml/caml.c | $(B)
-$(B)/string_convertions.o: javacaml/string_convertions.c | $(B)
+$(B)/java_stubs.o: srcs/c/java_stubs.c | $(B)
+$(B)/caml.o: srcs/c/caml.c | $(B)
+$(B)/string_convertions.o: srcs/c/string_convertions.c | $(B)
 
 clean::
 	rm -f $(OBJ_FILES)
