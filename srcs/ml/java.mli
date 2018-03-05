@@ -3,7 +3,8 @@
 
 (** Represent a java object
 	The `'a` (phantom) parameter is to embed custom types
-	Does not support hash and marshalling
+	Does not support marshalling
+	Polymorphic hash is implemented by calling Java's Object.hashCode
 	Polymorphic compare is implemented using Java's Comparable interface
 		It has a few differences with `compare`:
 		- Objects with the exact same reference are considered equals
@@ -66,6 +67,18 @@ val objectclass : 'a obj -> jclass
 		or does not implements the Comparable interface
 	Raises `Exception` if the `compareTo` method thrown an exception *)
 val compare : 'a obj -> 'a obj -> int
+
+(** Binding for `Object.toString()`
+	Raises `Failure` if the object is `null` *)
+val to_string : 'a obj -> string
+
+(** Binding for `Object.equals(o)`
+	Raises `Failure` if the first argument is `null` *)
+val equals : 'a obj -> 'a obj -> bool
+
+(** Binding for `Object.hashCode()`
+	Raises `Failure` if the object is `null` *)
+val hash_code : 'a obj -> int
 
 (** Instantiate a new object
 	Assume enough argument are in the calling stack (see `push`)

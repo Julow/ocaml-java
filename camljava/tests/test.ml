@@ -255,6 +255,16 @@ let test () =
 	assert (compare (int_new "1") (int_new "2") < 0);
 	assert (compare (int_new "2") (int_new "1") > 0);
 
+	assert (equals obj obj);
+	assert (not (equals obj null));
+	assert (equals (int_new "9999999") (int_new "9999999"));
+	assert (not (equals (int_new "1") (int_new "2")));
+	must_fail (fun () -> equals null obj);
+	assert (hash_code null = 0);
+	must_fail (fun () -> to_string null);
+
+	assert (to_string (int_new "123") = "123");
+
 	let m_rec_b = get_meth_static cls "test_rec_b" "(Ljava/lang/String;)Ljava/lang/String;" in
 
 	let test_rec_a s =

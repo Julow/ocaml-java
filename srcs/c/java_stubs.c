@@ -79,12 +79,25 @@ static int java_obj_compare(value a, value b)
 	return d;
 }
 
+static intnat java_obj_hash(value obj)
+{
+	jobject			obj_;
+	int				hash;
+
+	if (obj == Java_null_val)
+		return 0;
+	obj_ = Java_obj_val(obj);
+	hash = (*env)->CallIntMethod(env, obj_, METHOD(Object, hashCode));
+	check_exceptions();
+	return hash & 0x7FFFFF;
+}
+
 struct custom_operations ocamljava__java_obj_custom_ops = {
 	.identifier = "ocaml_java__obj",
 	.finalize = java_obj_finalize,
 	.compare = java_obj_compare,
 	.compare_ext = custom_compare_ext_default,
-	.hash = custom_hash_default,
+	.hash = java_obj_hash,
 	.serialize = custom_serialize_default,
 	.deserialize = custom_deserialize_default
 };
@@ -123,6 +136,38 @@ value ocaml_java__objectclass(value obj)
 value ocaml_java__compare(value a, value b)
 {
 	return Val_long(java_obj_compare(a, b));
+}
+
+value ocaml_java__to_string(value obj)
+{
+	jstring		str;
+	value		r;
+
+	if (obj == Java_null_val)
+		caml_failwith("Java.to_string: Null");
+	str = (*env)->CallObjectMethod(env, Java_obj_val(obj),
+			METHOD(Object, toString));
+	check_exceptions();
+	r = ocaml_java__of_jstring(env, str);
+	(*env)->DeleteLocalRef(env, str);
+	return r;
+}
+
+value ocaml_java__equals(value a, value b)
+{
+	int			eq;
+
+	if (a == Java_null_val)
+		caml_failwith("Java.equals: Null");
+	eq = (*env)->CallBooleanMethod(env, Java_obj_val(a),
+			METHOD(Object, equals), Java_obj_val_opt(b));
+	check_exceptions();
+	return Val_long(eq);
+}
+
+value ocaml_java__hash_code(value obj)
+{
+	return (Val_long(java_obj_hash(obj)));
 }
 
 /*

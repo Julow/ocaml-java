@@ -27,6 +27,10 @@
 	_CLASS("java/lang/", Comparable) \
 		_METHOD(Comparable, compareTo, "(Ljava/lang/Object;)I") \
 	_CLASS("java/lang/", String) \
+	_CLASS("java/lang/", Object) \
+		_METHOD(Object, toString, "()Ljava/lang/String;") \
+		_METHOD(Object, equals, "(Ljava/lang/Object;)Z") \
+		_METHOD(Object, hashCode, "()I") \
 	_CLASS("juloo/javacaml/", Callback) \
 		_INIT(Callback, "(J)V") \
 		_FIELD(Callback, closure, "J") \

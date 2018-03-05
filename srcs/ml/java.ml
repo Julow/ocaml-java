@@ -49,6 +49,10 @@ external objectclass : _ obj -> jclass = "ocaml_java__objectclass"
 
 external compare : 'a obj -> 'a obj -> int = "ocaml_java__compare"
 
+external to_string : 'a obj -> string = "ocaml_java__to_string"
+external equals : 'a obj -> 'a obj -> bool = "ocaml_java__equals"
+external hash_code : 'a obj -> int = "ocaml_java__hash_code"
+
 external new_ : jclass -> meth_constructor -> _ obj = "ocaml_java__new"
 
 external push_int : int -> unit = "ocaml_java__push_int" [@@noalloc]
