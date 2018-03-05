@@ -47,6 +47,8 @@ external sameobject : _ obj -> _ obj -> bool
 
 external objectclass : _ obj -> jclass = "ocaml_java__objectclass"
 
+external compare : 'a obj -> 'a obj -> int = "ocaml_java__compare"
+
 external new_ : jclass -> meth_constructor -> _ obj = "ocaml_java__new"
 
 external push_int : int -> unit = "ocaml_java__push_int" [@@noalloc]

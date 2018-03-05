@@ -208,12 +208,17 @@ let test () =
 
 	let arr () = Jarray.(of_obj (to_obj (create_object cls null 1))) in
 
+	let must_fail f =
+		try ignore (f ()); assert false
+		with Failure _ -> ()
+	in
+
 	for i = 0 to 500 do
-		begin try ignore (Jarray.get_string (arr ()) 0); assert false with Failure _ -> () end;
+		must_fail (fun () -> Jarray.get_string (arr ()) 0);
 		assert (Jarray.get_string_opt (arr ()) 0 = None);
-		begin try ignore (Jarray.get_value (arr ()) 0); assert false with Failure _ -> () end;
+		must_fail (fun () -> Jarray.get_value (arr ()) 0);
 		assert (Jarray.get_value_opt (arr ()) 0 = None);
-		begin try ignore (Jarray.get_array (arr ()) 0); assert false with Failure _ -> () end
+		must_fail (fun () -> Jarray.get_array (arr ()) 0);
 	done;
 
 	assert (instanceof obj cls);
@@ -223,7 +228,32 @@ let test () =
 	assert (not (sameobject obj null));
 	assert (not (sameobject null obj));
 	assert (sameobject (Obj.magic (objectclass obj)) (Obj.magic cls));
-	begin try ignore (objectclass null); assert false with Failure _ -> () end;
+	must_fail (fun () -> objectclass null);
+	must_fail (fun () -> compare null obj);
+	must_fail (fun () -> compare null null);
+	must_fail (fun () -> compare obj null);
+	must_fail (fun () -> compare obj obj);
+	assert (null <> obj);
+	assert (null = null);
+	assert (obj <> null);
+	must_fail (fun () -> obj = obj);
+
+	let int_cls = find_class "java/lang/Integer" in
+	let int_init = get_constructor int_cls "(Ljava/lang/String;)V" in
+	let int_new s =
+		push_string s;
+		new_ int_cls int_init
+	in
+
+	assert (int_new "42" = int_new "42");
+	assert (int_new "1" <> int_new "2");
+	assert (int_new "1" < int_new "2");
+	assert (int_new "2" > int_new "1");
+
+	assert (compare (int_new "42") (int_new "42") = 0);
+	assert (compare (int_new "1") (int_new "2") <> 0);
+	assert (compare (int_new "1") (int_new "2") < 0);
+	assert (compare (int_new "2") (int_new "1") > 0);
 
 	let m_rec_b = get_meth_static cls "test_rec_b" "(Ljava/lang/String;)Ljava/lang/String;" in
 

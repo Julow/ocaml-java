@@ -3,7 +3,11 @@
 
 (** Represent a java object
 	The `'a` (phantom) parameter is to embed custom types
-	Does not support hash and marshalling *)
+	Does not support hash and marshalling
+	Polymorphic compare is implemented using Java's Comparable interface
+		It has a few differences with `compare`:
+		- Objects with the exact same reference are considered equals
+		- Comparing with `null` will compare only the reference *)
 type 'a obj
 
 (** Java array
@@ -49,16 +53,19 @@ external instanceof : 'a obj -> jclass -> bool
 	= "ocaml_java__instanceof" [@@noalloc]
 
 (** `sameobject a b`
-	Returns `true` if `a` and `b` refer to the same object or false otherwise
-	Not the same as `(=)` because `(=)` only compare references
-	while many difference references may point to the same object
-	(eg. global or weak references) *)
+	Returns `true` if `a` and `b` refer to the same object or false otherwise *)
 external sameobject : 'a obj -> 'b obj -> bool
 	= "ocaml_java__sameobject" [@@noalloc]
 
 (** Returns the class of an object
 	Raises `Failure` if the object is `null` *)
 val objectclass : 'a obj -> jclass
+
+(** Compare two objects by calling `compareTo` from the Comparable interface
+	Raises `Failure` if the first argument is null
+		or does not implements the Comparable interface
+	Raises `Exception` if the `compareTo` method thrown an exception *)
+val compare : 'a obj -> 'a obj -> int
 
 (** Instantiate a new object
 	Assume enough argument are in the calling stack (see `push`)

@@ -17,6 +17,41 @@ static JNIEnv *env;
 
 /*
 ** ========================================================================== **
+** Exceptions
+*/
+
+static value *java_exception = NULL;
+
+static value raise_java_exception(jthrowable exn)
+{
+	CAMLparam0();
+	CAMLlocal1(thrbl);
+	thrbl = alloc_java_obj(env, exn);
+	(*env)->DeleteLocalRef(env, exn);
+	if (java_exception == NULL)
+	{
+		java_exception = caml_named_value("Java.Exception");
+		if (java_exception == NULL)
+			caml_failwith("camljava not properly linked");
+	}
+	caml_raise_with_arg(*java_exception, thrbl);
+	CAMLreturn(Val_unit);
+}
+
+// Check if a Java exception has been thrown
+// if there is, raises Java.Exception
+static void check_exceptions(void)
+{
+	jthrowable exn;
+
+	exn = (*env)->ExceptionOccurred(env);
+	if (exn == NULL) return ;
+	(*env)->ExceptionClear(env);
+	raise_java_exception(exn);
+}
+
+/*
+** ========================================================================== **
 ** Java.obj
 ** Hold a reference to a Java object
 */
@@ -29,12 +64,26 @@ static void java_obj_finalize(value v)
 
 static int java_obj_compare(value a, value b)
 {
-	intnat a_;
-	intnat b_;
+	static jclass		Comparable = NULL;
+	static jmethodID	Comparable_compareTo;
+	jobject				obj_a;
+	jobject const		obj_b = Java_obj_val_opt(b);
+	jint				d;
 
-	a_ = (a == Java_null_val) ? 0 : (intnat)Java_obj_val(a);
-	b_ = (b == Java_null_val) ? 0 : (intnat)Java_obj_val(b);
-	return a_ - b_;
+	if (Comparable == NULL)
+	{
+		Comparable = (*env)->FindClass(env, "java/lang/Comparable");
+		Comparable_compareTo = (*env)->GetMethodID(env, Comparable,
+			"compareTo", "(Ljava/lang/Object;)I");
+	}
+	if (a == Java_null_val)
+		caml_failwith("Java.compare: Null");
+	obj_a = Java_obj_val(a);
+	if (!(*env)->IsInstanceOf(env, obj_a, Comparable))
+		caml_failwith("Java.compare: Must implements Comparable");
+	d = (*env)->CallIntMethod(env, obj_a, Comparable_compareTo, obj_b);
+	check_exceptions();
+	return d;
 }
 
 struct custom_operations ocamljava__java_obj_custom_ops = {
@@ -78,39 +127,9 @@ value ocaml_java__objectclass(value obj)
 	return v;
 }
 
-/*
-** ========================================================================== **
-** Exceptions
-*/
-
-static value *java_exception = NULL;
-
-static value raise_java_exception(jthrowable exn)
+value ocaml_java__compare(value a, value b)
 {
-	CAMLparam0();
-	CAMLlocal1(thrbl);
-	thrbl = alloc_java_obj(env, exn);
-	(*env)->DeleteLocalRef(env, exn);
-	if (java_exception == NULL)
-	{
-		java_exception = caml_named_value("Java.Exception");
-		if (java_exception == NULL)
-			caml_failwith("camljava not properly linked");
-	}
-	caml_raise_with_arg(*java_exception, thrbl);
-	CAMLreturn(Val_unit);
-}
-
-// Check if a Java exception has been thrown
-// if there is, raises Java.Exception
-static void check_exceptions(void)
-{
-	jthrowable exn;
-
-	exn = (*env)->ExceptionOccurred(env);
-	if (exn == NULL) return ;
-	(*env)->ExceptionClear(env);
-	raise_java_exception(exn);
+	return Val_long(java_obj_compare(a, b));
 }
 
 /*
