@@ -15,6 +15,9 @@ public class Caml
 	 * Throws CamlException if an OCaml exception is raised
 	 * May throws any exception (with Jthrowable.throw/throw_new)
 	 *
+	 * With OCaml version < 4.05,
+	 *  the program will exit if an exception is raised
+	 *
 	 * > `caml_startup`
 	 */
 	public static native void startup();

@@ -10,6 +10,7 @@
 #include <caml/memory.h>
 #include <caml/mlvalues.h>
 #include <caml/printexc.h>
+#include <caml/version.h>
 
 static jclass
 	NullPointerException,
@@ -474,17 +475,30 @@ void ocaml_java__javacaml_init(JNIEnv *env)
 
 #else
 
+# if OCAML_VERSION_MAJOR >= 4 && OCAML_VERSION_MINOR >= 5
+
+static void init_ocaml(JNIEnv *env, char **argv)
+{
+	value const res = caml_startup_exn(argv);
+
+	if (Is_exception_result(res))
+		throw_caml_exception(env, Extract_exception(res));
+}
+
+# else
+
+#  define init_ocaml(env, argv) caml_startup(argv)
+
+# endif
+
 void Java_juloo_javacaml_Caml_startup(JNIEnv *env, jclass c)
 {
 	static char *argv[] = { "", NULL };
-	value res;
 
 	if (!init_classes(env))
 		return ;
 	ocaml_java__camljava_init(env);
-	res = caml_startup_exn(argv);
-	if (Is_exception_result(res))
-		throw_caml_exception(env, Extract_exception(res));
+	init_ocaml(env, argv);
 	init_arg_stack();
 	(void)c;
 }
