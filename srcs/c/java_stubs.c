@@ -1,5 +1,6 @@
 #include "camljava_utils.h"
 #include "javacaml_utils.h"
+#include "classes.h"
 
 #include <jni.h>
 #include <stddef.h>
@@ -64,24 +65,16 @@ static void java_obj_finalize(value v)
 
 static int java_obj_compare(value a, value b)
 {
-	static jclass		Comparable = NULL;
-	static jmethodID	Comparable_compareTo;
 	jobject				obj_a;
 	jobject const		obj_b = Java_obj_val_opt(b);
 	jint				d;
 
-	if (Comparable == NULL)
-	{
-		Comparable = (*env)->FindClass(env, "java/lang/Comparable");
-		Comparable_compareTo = (*env)->GetMethodID(env, Comparable,
-			"compareTo", "(Ljava/lang/Object;)I");
-	}
 	if (a == Java_null_val)
 		caml_failwith("Java.compare: Null");
 	obj_a = Java_obj_val(a);
-	if (!(*env)->IsInstanceOf(env, obj_a, Comparable))
+	if (!(*env)->IsInstanceOf(env, obj_a, CLASS(Comparable)))
 		caml_failwith("Java.compare: Must implements Comparable");
-	d = (*env)->CallIntMethod(env, obj_a, Comparable_compareTo, obj_b);
+	d = (*env)->CallIntMethod(env, obj_a, METHOD(Comparable, compareTo), obj_b);
 	check_exceptions();
 	return d;
 }
@@ -680,22 +673,12 @@ value ocaml_java__jarray_create_object(value cls, value obj, value length)
 
 value ocaml_java__jarray_create_string(value length)
 {
-	jclass const	string_cls = (*env)->FindClass(env, "java/lang/String");
-	value			v;
-
-	v = new_object_array(string_cls, NULL, Long_val(length));
-	(*env)->DeleteLocalRef(env, string_cls);
-	return v;
+	return new_object_array(CLASS(String), NULL, Long_val(length));
 }
 
 value ocaml_java__jarray_create_value(value length)
 {
-	jclass const	value_cls = (*env)->FindClass(env, "juloo/javacaml/Value");
-	value			v;
-
-	v = new_object_array(value_cls, NULL, Long_val(length));
-	(*env)->DeleteLocalRef(env, value_cls);
-	return v;
+	return new_object_array(CLASS(Value), NULL, Long_val(length));
 }
 
 value ocaml_java__jarray_create_array(value cls, value obj, value length)

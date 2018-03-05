@@ -42,11 +42,12 @@ clean::
 	rm -f $(B)/jclass.o $(T)/jclass.cmx $(T)/jclass.cmi
 	rm -f $(B)/jthrowable.o $(T)/jthrowable.cmx $(T)/jthrowable.cmi
 
-OBJ_FILES = $(B)/java_stubs.o $(B)/caml.o $(B)/string_convertions.o
+OBJ_FILES = $(B)/java_stubs.o $(B)/caml.o $(B)/string_convertions.o $(B)/classes.o
 
 $(B)/java_stubs.o: srcs/c/java_stubs.c | $(B)
 $(B)/caml.o: srcs/c/caml.c | $(B)
 $(B)/string_convertions.o: srcs/c/string_convertions.c | $(B)
+$(B)/classes.o: srcs/c/classes.c | $(B)
 
 clean::
 	rm -f $(OBJ_FILES)

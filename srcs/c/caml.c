@@ -1,5 +1,6 @@
 #include "camljava_utils.h"
 #include "javacaml_utils.h"
+#include "classes.h"
 
 #include <jni.h>
 #include <stddef.h>
@@ -12,29 +13,8 @@
 #include <caml/printexc.h>
 #include <caml/version.h>
 
-static jclass
-	NullPointerException,
-	Callback,
-	CallbackNotFoundException,
-	Value,
-	CamlException,
-	StackTraceElement,
-	InvalidMethodIdException,
-	ArgumentStackOverflowException,
-	ThreadException;
-
-static jmethodID
-	Callback_init,
-	Value_init,
-	CamlException_init,
-	StackTraceElement_init;
-
-static jfieldID
-	Callback_closure,
-	Value_value;
-
 #define THROW_NULLPTR(env, ARG_NAME) \
-		((*env)->ThrowNew(env, NullPointerException, \
+		((*env)->ThrowNew(env, CLASS(NullPointerException), \
 			"Called with null `" ARG_NAME "`"), \
 		(void)0)
 
@@ -45,7 +25,7 @@ static jfieldID
 // Return the value pointed to by the Value `v`
 value ocaml_java__jvalue_get(JNIEnv *env, jobject v)
 {
-	long const v_ = (*env)->GetLongField(env, v, Value_value);
+	long const v_ = (*env)->GetLongField(env, v, FIELD(Value, value));
 
 	return *(value*)v_;
 }
@@ -57,12 +37,12 @@ jobject ocaml_java__jvalue_new(JNIEnv *env, value v)
 
 	caml_register_global_root(global);
 	*global = v;
-	return (*env)->NewObject(env, Value, Value_init, (jlong)global);
+	return (*env)->NewObject(env, CLASS(Value), CONSTR(Value), (jlong)global);
 }
 
 void Java_juloo_javacaml_Value_release(JNIEnv *env, jobject v)
 {
-	long const v_ = (*env)->GetLongField(env, v, Value_value);
+	long const v_ = (*env)->GetLongField(env, v, FIELD(Value, value));
 	value *const global = (value*)v_;
 
 	caml_remove_global_root(global);
@@ -106,13 +86,15 @@ static jobjectArray alloc_stack_trace_elements(JNIEnv *env, value locations)
 	jobject			elem;
 
 	unknown_loc = (*env)->NewStringUTF(env, "<OCaml>");
-	elements = (*env)->NewObjectArray(env, loc_count, StackTraceElement, NULL);
+	elements = (*env)->NewObjectArray(env, loc_count,
+		CLASS(StackTraceElement), NULL);
 	for (i = 0; i < loc_count; i++)
 	{
 		loc = Field(locations, i);
 		file_name = ocaml_java__to_jstring(env, Field(loc, 0));
-		elem = (*env)->NewObject(env, StackTraceElement, StackTraceElement_init,
-				unknown_loc, unknown_loc, file_name, Long_val(Field(loc, 1)));
+		elem = (*env)->NewObject(env, CLASS(StackTraceElement),
+				CONSTR(StackTraceElement), unknown_loc, unknown_loc,
+				file_name, Long_val(Field(loc, 1)));
 		(*env)->SetObjectArrayElement(env, elements, i, elem);
 		(*env)->DeleteLocalRef(env, file_name);
 		(*env)->DeleteLocalRef(env, elem);
@@ -168,8 +150,8 @@ static void throw_caml_exception(JNIEnv *env, value exn)
 	exn_msg = (*env)->NewStringUTF(env, _exn_msg);
 	caml_stat_free(_exn_msg);
 	elements = alloc_stack_trace_elements(env, get_ocaml_backtrace());
-	java_exn = (*env)->NewObject(env, CamlException, CamlException_init,
-			exn_msg, get_cause(exn), elements);
+	java_exn = (*env)->NewObject(env, CLASS(CamlException),
+			CONSTR(CamlException), exn_msg, get_cause(exn), elements);
 	(*env)->Throw(env, java_exn);
 	(*env)->DeleteLocalRef(env, exn_msg);
 	(*env)->DeleteLocalRef(env, elements);
@@ -200,7 +182,7 @@ void Java_juloo_javacaml_Caml_function__Ljuloo_javacaml_Callback_2(JNIEnv *env,
 
 	if (IS_NULL(env, callback))
 		return THROW_NULLPTR(env, "callback");
-	func_ = (*env)->GetLongField(env, callback, Callback_closure);
+	func_ = (*env)->GetLongField(env, callback, FIELD(Callback, closure));
 	func = *(value*)func_;
 	Store_field(stack, 0, func);
 	stack_size = 1;
@@ -219,7 +201,7 @@ void Java_juloo_javacaml_Caml_method(JNIEnv *env, jclass c, jobject v,
 	method = caml_get_public_method(obj, method_id);
 	if (method == 0)
 	{
-		(*env)->ThrowNew(env, InvalidMethodIdException,
+		(*env)->ThrowNew(env, CLASS(InvalidMethodIdException),
 				"Method id does not reference any method");
 		return ;
 	}
@@ -236,7 +218,7 @@ void Java_juloo_javacaml_Caml_arg##NAME(JNIEnv *env, jclass c, TYPE v) \
 { \
 	if (stack_size >= STACK_MAX_SIZE) \
 	{ \
-		(*env)->ThrowNew(env, ArgumentStackOverflowException, "Overflow"); \
+		(*env)->ThrowNew(env, CLASS(ArgumentStackOverflowException), "Overflow"); \
 		return ; \
 	} \
 	Store_field(stack, stack_size, CONVERT(env, v)); \
@@ -282,7 +264,7 @@ TYPE Java_juloo_javacaml_Caml_call##NAME(JNIEnv *env, jclass c) \
 \
 	if (ocaml_java__camljava_env() != env) \
 	{ \
-		(*env)->ThrowNew(env, ThreadException, \
+		(*env)->ThrowNew(env, CLASS(ThreadException), \
 			"Calling OCaml code with a thread other than the main thread"); \
 		return DUMMY; \
 	} \
@@ -336,11 +318,12 @@ jobject Java_juloo_javacaml_Caml_getCallback(JNIEnv *env, jclass c,
 	name_utf = (*env)->GetStringUTFChars(env, name, NULL);
 	closure = caml_named_value(name_utf);
 	if (closure == NULL)
-		(*env)->ThrowNew(env, CallbackNotFoundException, name_utf);
+		(*env)->ThrowNew(env, CLASS(CallbackNotFoundException), name_utf);
 	(*env)->ReleaseStringUTFChars(env, name, name_utf);
 	if (closure == NULL)
 		return NULL; // dummy
-	return (*env)->NewObject(env, Callback, Callback_init, (jlong)closure);
+	return (*env)->NewObject(env, CLASS(Callback), CONSTR(Callback),
+			(jlong)closure);
 	(void)c;
 }
 
@@ -364,44 +347,6 @@ jlong Java_juloo_javacaml_Caml_hashVariant(JNIEnv *env, jclass c,
 
 // ========================================================================== //
 // init
-
-static int init_classes(JNIEnv *env)
-{
-#define DEF(ST, FN, ...) do { \
-	ST = (*env)->FN(env, ##__VA_ARGS__); \
-	if (ST == NULL) return 0; \
-} while (0)
-
-#define C(PATH, NAME) do { \
-	DEF(NAME, FindClass, PATH #NAME); \
-	NAME = (*env)->NewGlobalRef(env, NAME); \
-} while (0)
-#define I(CLASS, SIG) DEF(CLASS##_init, GetMethodID, CLASS, "<init>", SIG)
-#define F(CLASS, NAME, SIG) DEF(CLASS##_##NAME, GetFieldID, CLASS, #NAME, SIG)
-
-	C("java/lang/", NullPointerException);
-	C("juloo/javacaml/", Callback);
-	I(Callback, "(J)V");
-	F(Callback, closure, "J");
-	C("juloo/javacaml/", CallbackNotFoundException);
-	C("juloo/javacaml/", Value);
-	I(Value, "(J)V");
-	F(Value, value, "J");
-	C("juloo/javacaml/", CamlException);
-	I(CamlException, "(Ljava/lang/String;Ljava/lang/Throwable;"
-		"[Ljava/lang/StackTraceElement;)V");
-	C("java/lang/", StackTraceElement);
-	I(StackTraceElement, "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)V");
-	C("juloo/javacaml/", InvalidMethodIdException);
-	C("juloo/javacaml/", ArgumentStackOverflowException);
-	C("juloo/javacaml/", ThreadException);
-
-#undef C
-#undef I
-#undef F
-#undef DEF
-	return 1;
-}
 
 #ifdef TARGET_CAMLJAVA
 
@@ -450,25 +395,22 @@ static JNINativeMethod native_methods[] = {
 //  from Java's `System.loadLibrary`
 static int register_natives(JNIEnv *env)
 {
-	jclass const caml_class = (*env)->FindClass(env, "juloo/javacaml/Caml");
+	jclass	caml_class;
+	int		r;
 
+	caml_class = (*env)->FindClass(env, "juloo/javacaml/Caml");
 	if (caml_class == NULL)
 		return 0;
-	return ((*env)->RegisterNatives(env, caml_class, native_methods,
-			COUNT(native_methods)) == 0);
+	r = (*env)->RegisterNatives(env, caml_class,
+			native_methods, COUNT(native_methods));
+	(*env)->DeleteLocalRef(env, caml_class);
+	return (r == 0);
 }
 
 // Initialise the library from camljava
 void ocaml_java__javacaml_init(JNIEnv *env)
 {
 	init_arg_stack();
-	if (!init_classes(env))
-	{
-		// if init_classes fail, it means javacaml.jar is not loaded
-		// clear exception since it is optional
-		(*env)->ExceptionClear(env);
-		return ;
-	}
 	if (!register_natives(env))
 		caml_failwith("Failed to link javacaml");
 }
@@ -495,8 +437,6 @@ void Java_juloo_javacaml_Caml_startup(JNIEnv *env, jclass c)
 {
 	static char *argv[] = { "", NULL };
 
-	if (!init_classes(env))
-		return ;
 	ocaml_java__camljava_init(env);
 	init_ocaml(env, argv);
 	init_arg_stack();
