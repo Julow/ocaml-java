@@ -153,7 +153,7 @@ static jobject get_cause(value exn)
 }
 
 // Throw a CamlException in reaction of `exn`
-// If ExceptionOccurred is set, let it through and do not throw a CamlException
+// If a Java exception is thrown, do not throw a CamlException
 static void throw_caml_exception(JNIEnv *env, value exn)
 {
 	char			*_exn_msg;
@@ -161,7 +161,7 @@ static void throw_caml_exception(JNIEnv *env, value exn)
 	jthrowable		java_exn;
 	jobjectArray	elements;
 
-	if ((*env)->ExceptionOccurred(env) != NULL)
+	if ((*env)->ExceptionCheck(env))
 		return ;
 	// function from caml/printexc.h
 	_exn_msg = caml_format_exception(exn);

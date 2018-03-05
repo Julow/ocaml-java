@@ -692,13 +692,11 @@ value ocaml_java__jarray_length(value array)
 
 static void	check_out_of_bound_exception(void)
 {
-	jthrowable exn = (*env)->ExceptionOccurred(env);
-
-	if (exn == NULL)
-		return ;
-	(*env)->DeleteLocalRef(env, exn);
-	(*env)->ExceptionClear(env);
-	caml_invalid_argument("index out of bound");
+	if ((*env)->ExceptionCheck(env))
+	{
+		(*env)->ExceptionClear(env);
+		caml_invalid_argument("index out of bound");
+	}
 }
 
 #define GEN_JARRAY_SET_PRIM(NAME, JNAME, TYPE, CONV_OF, DST, CONV_TO) \
