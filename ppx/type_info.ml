@@ -1,17 +1,20 @@
 open Parsetree
 open Ast_tools
 
-(* Most expressions expect `obj` and `__cls` to be defined *)
+(** Represent a type that have convertions in ocaml-java
+	Most expressions expect "obj", "id" and/or "cls" to be defined to
+	the current object, the ID of the method/field and the current class
+	`push` takes the name of the argument as parameter *)
 type t = {
 	sigt : expression;
 	type_ : core_type;
 	push : string -> expression;
-	call : string -> expression;
-	call_static : string -> expression;
-	read_field : string -> expression;
-	write_field : string -> expression;
-	read_field_static : string -> expression;
-	write_field_static : string -> expression
+	call : expression;
+	call_static : expression;
+	read_field : expression;
+	write_field : expression;
+	read_field_static : expression;
+	write_field_static : expression
 }
 
 (** Create a type_info
@@ -19,25 +22,15 @@ type t = {
 		of call, read and write calls *)
 let create ~push ~call ~call_static ~read_field ~write_field
 	~read_field_static ~write_field_static sigt type_ conv_to conv_of =
-	let push arg =
-		[%expr [%e push] ([%e conv_to (mk_ident [ arg ])])]
-	and call mid =
-		conv_of [%expr [%e call] obj [%e mk_ident [ mid ]]]
-	and call_static mid =
-		conv_of [%expr [%e call_static] __cls [%e mk_ident [ mid ]]]
-	and read_field fid =
-		conv_of [%expr [%e read_field] obj [%e mk_ident [ fid ]]]
-	and write_field fid =
-		[%expr [%e write_field] obj [%e mk_ident [ fid ]]
-			[%e conv_to [%expr v]]]
-	and read_field_static fid =
-		conv_of [%expr [%e read_field_static] __cls [%e mk_ident [ fid ]]]
-	and write_field_static fid =
-		[%expr [%e write_field_static] __cls [%e mk_ident [ fid ]]
-			[%e conv_to [%expr v]]]
-	in
-	{ sigt; type_; push; call; call_static; read_field; write_field;
-		read_field_static; write_field_static }
+	let push arg = [%expr [%e push] ([%e conv_to (mk_ident [ arg ])])] in
+	{ sigt; type_; push;
+		call = conv_of [%expr [%e call] obj id];
+		call_static = conv_of [%expr [%e call_static] cls id];
+		read_field = conv_of [%expr [%e read_field] obj id];
+		write_field = [%expr [%e write_field] obj id [%e conv_to [%expr v]]];
+		read_field_static = conv_of [%expr [%e read_field_static] cls id];
+		write_field_static =
+			[%expr [%e write_field_static] cls id [%e conv_to [%expr v]]] }
 
 (** Concat a list of type_info by signatures *)
 let rec concat_sigt =

@@ -33,28 +33,6 @@ let field_impl name mut read write =
 	and setter = mk_let ("set'" ^ name) write in
 	if mut then [ getter; setter ] else [ getter ]
 
-(* Global (lookup of class handles, methods and fields ids) *)
-let global =
-	function
-	| `GMethod (name, sigt)			->
-		let name = mk_cstr name
-		and sigt = opti_string_concat (Type_info.meth_sigt sigt) in
-		[%expr Jclass.get_meth __cls [%e name] [%e sigt]]
-	| `GMethod_static (name, sigt)	->
-		let name = mk_cstr name
-		and sigt = opti_string_concat (Type_info.meth_sigt sigt) in
-		[%expr Jclass.get_meth_static __cls [%e name] [%e sigt]]
-	| `GField (name, ti)			->
-		let name = mk_cstr name in
-		[%expr Jclass.get_field __cls [%e name] [%e ti.sigt]]
-	| `GField_static (name, ti)		->
-		let name = mk_cstr name in
-		[%expr Jclass.get_field_static __cls [%e name] [%e ti.sigt]]
-	| `GConstructor args			->
-		let sigt = opti_string_concat
-			[%expr "(" ^ [%e concat_sigt args] ^ ")V"] in
-		[%expr Jclass.get_constructor __cls [%e sigt]]
-
 (* Signature *)
 let sigt_item =
 	let wrap_no_args args t =
@@ -101,52 +79,95 @@ let impl_item =
 	let wrap_no_args args body =
 		if args = [] then [%expr (fun () -> [%e body])] else body
 	in
-	let meth_call static ret mid =
-		let mide = mk_ident [ mid ] in
-		match static, ret with
-		| false, `Void		-> [%expr Java.call_void obj [%e mide ]]
-		| true, `Void		-> [%expr Java.call_static_void __cls [%e mide ]]
-		| false, `Ret ti	-> ti.call mid
-		| true, `Ret ti		-> ti.call_static mid
+
+	(* Defines "id" in `body` *)
+	let load_id index load body =
+		let index = Exp.constant (Const.int index) in
+		[%expr
+			let id =
+				let id = Array.unsafe_get __cls [%e index] in
+				if id == Obj.magic 0 then begin
+					let id = [%e load] in
+					Array.unsafe_set __cls [%e index] (Obj.magic id);
+					id
+				end
+				else Obj.magic id
+			in
+			[%e body]]
+
+	(* Defines "cls" in `body`,
+		assumes the class is loaded (do not calls __load_cls) *)
+	and load_cls_unsafe body =
+		[%expr let cls = Array.unsafe_get __cls 0 in [%e body]]
 	in
+
+	(* Expects an "id" binding the method ID *)
+	let meth_call static ret =
+		match static, ret with
+		| false, `Void		-> [%expr Java.call_void obj id]
+		| true, `Void		-> [%expr Java.call_static_void cls id]
+		| false, `Ret ti	-> ti.call
+		| true, `Ret ti		-> ti.call_static
+	in
+
 	fun add_global ->
 	function
 	| `Method (name, jname, (args, ret as sigt))		->
-		let mid = add_global (`GMethod (jname, sigt)) in
-		let wrap body = [%expr (fun obj -> [%e body])] in
-		[ meth_impl name args wrap (meth_call false ret mid) ]
+		let index = add_global ()
+		and sigt = opti_string_concat (Type_info.meth_sigt sigt) in
+		let load = load_id index
+			[%expr Jclass.get_meth (__load_cls ())
+				[%e mk_cstr jname] [%e sigt]]
+		and wrap body = [%expr (fun obj -> [%e body])] in
+		[ meth_impl name args wrap (load (meth_call false ret)) ]
 
 	| `Method_static (name, jname, (args, ret as sigt))	->
-		let mid = add_global (`GMethod_static (jname, sigt)) in
-		[ meth_impl name args (wrap_no_args args) (meth_call true ret mid) ]
+		let index = add_global ()
+		and sigt = opti_string_concat (Type_info.meth_sigt sigt) in
+		let load body = load_id index
+			[%expr Jclass.get_meth_static (__load_cls ())
+				[%e mk_cstr jname] [%e sigt]]
+			(load_cls_unsafe body) in
+		[ meth_impl name args (wrap_no_args args) (load (meth_call true ret)) ]
 
 	| `Field (name, jname, ti, mut)			->
-		let fid = add_global (`GField (jname, ti)) in
+		let index = add_global () in
+		let load = load_id index
+			[%expr Jclass.get_field (__load_cls ())
+				[%e mk_cstr jname] [%e ti.sigt]] in
 		field_impl name mut
-			[%expr (fun obj -> [%e ti.read_field fid])]
-			[%expr (fun obj v -> [%e ti.write_field fid])]
+			[%expr (fun obj -> [%e load ti.read_field])]
+			[%expr (fun obj v -> [%e load ti.write_field])]
 
 	| `Field_static (name, jname, ti, mut)	->
-		let fid = add_global (`GField_static (jname, ti)) in
+		let index = add_global () in
+		let load body = load_id index
+			[%expr Jclass.get_field_static (__load_cls ())
+				[%e mk_cstr jname] [%e ti.sigt]]
+				(load_cls_unsafe body) in
 		field_impl name mut
-			[%expr (fun () -> [%e ti.read_field_static fid])]
-			[%expr (fun v -> [%e ti.write_field_static fid])]
+			[%expr (fun () -> [%e load ti.read_field_static])]
+			[%expr (fun v -> [%e load ti.write_field_static])]
 
 	| `Constructor (name, args)				->
-		let cid = add_global (`GConstructor args) in
+		let index = add_global ()
+		and sigt = opti_string_concat
+			[%expr "(" ^ [%e concat_sigt args] ^ ")V"] in
+		let load body = load_id index
+			[%expr Jclass.get_constructor (__load_cls ())
+				[%e sigt]]
+			(load_cls_unsafe body) in
 		[ meth_impl name args (wrap_no_args args)
-			[%expr Java.new_ __cls [%e mk_ident [ cid ]]] ]
+			(load [%expr Java.new_ cls id]) ]
 
 (* Generates implementation *)
 let class_impl path_name class_variants fields =
-	(* Use a ref to receive globals from `impl_item` and alloc an id *)
-	let globals, add_global =
-		let globals, count = ref [], ref 0 in
-		globals, fun g ->
-			let id = Printf.sprintf "__%d" !count in
-			incr count;
-			globals := (id, g) :: !globals;
-			id
+	(* Use a ref to count globals from `impl_item` *)
+	let global_count = ref 1 in
+	let add_global () =
+		let id = !global_count in
+		incr global_count;
+		id
 	in
 
 	(* Items *)
@@ -154,13 +175,9 @@ let class_impl path_name class_variants fields =
 		impl_item add_global field @ items
 	) fields [] in
 
-	(* Globals *)
-	let items = List.fold_left (fun items (id, g) ->
-		mk_let id (global g) :: items
-	) items !globals in
-
 	(* Intro *)
-	let class_name = mk_cstr path_name in
+	let cls_array = Array.(make !global_count [%expr Obj.magic 0] |> to_list)
+	and class_name = mk_cstr path_name in
 	let items = [
 
 		[%stri type c = [%t class_variants]];
@@ -169,12 +186,21 @@ let class_impl path_name class_variants fields =
 
 		[%stri let __class_name () = [%e class_name]];
 
-		[%stri let __cls = Jclass.find_class [%e class_name]];
+		[%stri let __cls : Jclass.t array = [%e Exp.array cls_array]];
+
+		[%stri let __load_cls () =
+			let cls = Array.unsafe_get __cls 0 in
+			if cls == Obj.magic 0 then begin
+				let cls = Jclass.find_class [%e class_name] in
+				Array.unsafe_set __cls 0 cls;
+				cls
+			end
+			else cls];
 
 		[%stri external of_obj_unsafe : 'a Java.obj -> t = "%identity"];
 
 		[%stri let of_obj obj =
-			if Java.instanceof obj __cls
+			if Java.instanceof obj (__load_cls ())
 			then of_obj_unsafe obj
 			else failwith "of_obj"]
 
