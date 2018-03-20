@@ -1,19 +1,19 @@
-package camljava.test;
+package ocamljava.test;
 
 import juloo.javacaml.Caml;
 import juloo.javacaml.Value;
 
-public class Test
+public class TestCaml
 {
 	public int a;
 	public String b;
 
-	public Test()
+	public TestCaml()
 	{
 		this(42, "abc");
 	}
 
-	public Test(int a, String b)
+	public TestCaml(int a, String b)
 	{
 		this.a = a;
 		this.b = b;

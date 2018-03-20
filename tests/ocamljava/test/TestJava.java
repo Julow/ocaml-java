@@ -1,4 +1,4 @@
-package javacaml.test;
+package ocamljava.test;
 
 import juloo.javacaml.Caml;
 import juloo.javacaml.Callback;
@@ -8,7 +8,7 @@ import juloo.javacaml.CamlException;
 import juloo.javacaml.InvalidMethodIdException;
 import juloo.javacaml.ThreadException;
 
-public class Test
+public class TestJava
 {
 	private static void test()
 	{
@@ -201,7 +201,7 @@ public class Test
 			{
 				assert stack[i].getClassName().equals("<OCaml>");
 				assert stack[i].getMethodName().equals("<OCaml>");
-				assert stack[i].getFileName().contains("javacaml_test.ml");
+				assert stack[i].getFileName().contains("test_java.ml");
 				assert stack[i].getLineNumber() == line_nums[i];
 			}
 		}
@@ -231,7 +231,7 @@ public class Test
 	{
 		try
 		{
-			System.loadLibrary("test");
+			System.loadLibrary("test_javacaml");
 			Caml.startup();
 			do_test();
 			test_camljava();
