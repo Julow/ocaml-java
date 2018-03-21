@@ -1,4 +1,5 @@
 #include <jni.h>
+#include <stddef.h>
 #include "classes.h"
 
 static jobject wrap_global(JNIEnv *env, jobject local)

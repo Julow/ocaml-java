@@ -12,10 +12,12 @@ open Ast_tools
 	Raises a location error if the type is not supported *)
 let rec translate_type class_name java_path rec_classes polymorphic =
 	let no_conv expr = expr in
-	let type_info ?(conv_to=no_conv) ?(conv_of=no_conv) sigt suffix type_ =
-		let id prefix = mk_dot (Lident "Java") (prefix ^ suffix) in
+	let type_info ?(conv_to=no_conv) ?(conv_of=no_conv) sigt suffix
+			?(push_suffix=suffix) type_ =
+		let id prefix = mk_dot (Lident "Java") (prefix ^ suffix)
+		and push = mk_dot (Lident "Java") ("push_" ^ push_suffix) in
 		Type_info.create
-			~push:(id "push_")
+			~push
 			~call:(id "call_")
 			~call_static:(id "call_static_")
 			~read_field:(id "read_field_")
@@ -46,6 +48,11 @@ let rec translate_type class_name java_path rec_classes polymorphic =
 		| t -> translate_type class_name java_path rec_classes false t
 	in
 
+	let ti_charsequence conv_of push_suffix type_ =
+		let sigt = mk_cstr "Ljava/lang/CharSequence;" in
+		type_info ~conv_of sigt "object" ~push_suffix type_
+	in
+
 	let mn =
 		function
 		| Lident cn when cn = class_name ->
@@ -71,6 +78,7 @@ let rec translate_type class_name java_path rec_classes polymorphic =
 	| [%type: array option]) as t	->
 		(* Disable a few types that should not be valid class names *)
 		Location.raise_errorf ~loc:t.ptyp_loc "This type cannot be used here"
+
 	| [%type: int] as t				-> ti "I" "int" t
 	| [%type: bool] as t			-> ti "Z" "bool" t
 	| [%type: byte]					-> ti "B" "byte" [%type: int]
@@ -82,14 +90,29 @@ let rec translate_type class_name java_path rec_classes polymorphic =
 	| [%type: double]				-> ti "D" "double" [%type: float]
 	| [%type: string] as t			-> ti "Ljava/lang/String;" "string" t
 	| [%type: string option] as t	-> ti "Ljava/lang/String;" "string_opt" t
+	| [%type: [%t? _] Java.obj] as t -> ti "Ljava/lang/Object;" "object" t
+
+	| [%type: char_sequence]		->
+		let conv_of expr = [%expr Java.to_string ([%e expr])] in
+		ti_charsequence conv_of "string" [%type: string]
+	| [%type: char_sequence option]	->
+		let conv_of expr = [%expr
+			let r = [%e expr] in
+			if r == Java.null
+			then None
+			else Some (Java.to_string r)
+		] in
+		ti_charsequence conv_of "string_opt" [%type: string option]
+
 	| [%type: [%t? t] value]		-> ti "Ljuloo/javacaml/Value;" "value" t
 	| [%type: [%t? t] value option]	->
 		ti "Ljuloo/javacaml/Value;" "value_opt" [%type: [%t t] option]
-	| [%type: [%t? _] Java.obj] as t -> ti "Ljava/lang/Object;" "object" t
+
 	| [%type: [%t? t] array]		-> ti_array t
 	| [%type: [%t? t] array option]	->
 		let Type_info.{ sigt; type_ } = ti_array t in
 		type_info sigt "array_opt" [%type: [%t type_] option]
+
 	| [%type: [%t? { ptyp_desc = Ptyp_constr ({ txt = id }, []) }]] ->
 		let mn, java_path = mn id in
 		let sigt = [%expr "L" ^ [%e java_path] ^ ";"]

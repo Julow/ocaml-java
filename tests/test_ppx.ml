@@ -50,6 +50,8 @@ struct
 		initializer (empty : _)
 		initializer (of_builder : string_builder -> _)
 		method char_at : int -> char = "charAt"
+		method contains : char_sequence -> bool = "contains"
+		method sub_sequence : int -> int -> char_sequence = "subSequence"
 		method [@static] of_bool : bool -> jstring = "valueOf"
 		method [@static] of_int : int -> jstring = "valueOf"
 		method [@static] of_char : char -> jstring = "valueOf"
@@ -66,6 +68,13 @@ struct
 	end
 
 end
+
+let test_charsequence () =
+	let open Java_lang in
+	let s = Jstring.create "0123456789" in
+	assert (Jstring.contains s "234");
+	assert (not (Jstring.contains s "432"));
+	assert (Jstring.sub_sequence s 5 8 = "567")
 
 let run () =
 	let _ = Test.create_default () in
@@ -126,5 +135,7 @@ let run () =
 	in
 	test_string (Test.get_string ());
 	test_string s';
+
+	test_charsequence ();
 
 	()
