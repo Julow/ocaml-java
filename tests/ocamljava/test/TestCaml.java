@@ -188,4 +188,21 @@ public class TestCaml
 	{
 		return "[" + s + "]";
 	}
+
+	public static void		runrun(Runnable r)
+	{
+		r.run();
+	}
+
+	public static int		numrun = 0;
+
+	public static Runnable	getrun()
+	{
+		return new Runnable() {
+			public void run()
+			{
+				numrun++;
+			}
+		};
+	}
 }

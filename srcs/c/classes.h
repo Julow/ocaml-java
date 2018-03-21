@@ -26,6 +26,8 @@
 			"Ljava/lang/String;I)V") \
 	_CLASS("java/lang/", Comparable) \
 		_METHOD(Comparable, compareTo, "(Ljava/lang/Object;)I") \
+	_CLASS("java/lang/", Runnable) \
+		_METHOD(Runnable, run, "()V") \
 	_CLASS("java/lang/", String) \
 	_CLASS("java/lang/", Object) \
 		_METHOD(Object, toString, "()Ljava/lang/String;") \
@@ -37,6 +39,8 @@
 	_CLASS("juloo/javacaml/", Value) \
 		_INIT(Value, "(J)V") \
 		_FIELD(Value, value, "J") \
+	_CLASS("juloo/javacaml/", RunnableValue) \
+		_INIT(RunnableValue, "(J)V") \
 	_CLASS("juloo/javacaml/", CamlException) \
 		_INIT(CamlException, "(Ljava/lang/String;Ljava/lang/Throwable;" \
 			"[Ljava/lang/StackTraceElement;)V") \

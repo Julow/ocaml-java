@@ -1,5 +1,35 @@
 let () = Callback.register "get_int_pair" (fun () -> (1, 2))
 
+let test_runnable () =
+	let cls = Jclass.find_class "ocamljava/test/TestCaml" in
+	let runrun r =
+		let m = Jclass.get_meth_static cls "runrun" "(Ljava/lang/Runnable;)V" in
+		Java.push_object (Jrunnable.to_obj r);
+		Java.call_static_void cls m
+	and getrun () =
+		Jclass.get_meth_static cls "getrun" "()Ljava/lang/Runnable;"
+		|> Java.call_static_object cls
+		|> Jrunnable.of_obj
+	and numrun () =
+		Java.read_field_static_int cls @@
+		Jclass.get_field_static cls "numrun" "I"
+	in
+	let setnum n =
+		let f = Jclass.get_field_static cls "numrun" "I" in
+		Java.write_field_static_int cls f n
+	in
+	setnum 0;
+	assert (numrun () = 0);
+	let r = Jrunnable.create (fun () -> setnum (numrun () + 1)) in
+	Jrunnable.run r;
+	assert (numrun () = 1);
+	runrun r;
+	assert (numrun () = 2);
+	Jrunnable.run (getrun ());
+	assert (numrun () = 3);
+	runrun (getrun ());
+	assert (numrun () = 4)
+
 let run () =
 	let open Jclass in
 
@@ -263,4 +293,4 @@ let run () =
 
 	print_endline @@ test_rec_a "-> ";
 
-	()
+	test_runnable ()

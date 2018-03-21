@@ -5,11 +5,11 @@ package juloo.javacaml;
  */
 public class Value
 {
-	private long value;
+	protected long value;
 
-	private Value(long v) { this.value = v; }
+	protected Value(long v) { this.value = v; }
 
-	private native void release();
+	protected native void release();
 
 	protected void finalize()
 	{

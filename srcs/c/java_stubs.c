@@ -809,3 +809,38 @@ value ocaml_java__jthrowable_throw_new(value cls, value msg)
 	(*env)->ThrowNew(env, Java_obj_val(cls), String_val(msg));
 	return Val_unit;
 }
+
+/*
+** ========================================================================== **
+** Jrunnable API
+*/
+
+// Very similar to ocaml_java__jvalue_new
+value ocaml_java__runnable_create(value run)
+{
+	value *const	global = caml_stat_alloc(sizeof(value));
+	jobject			obj;
+
+	caml_register_global_root(global);
+	*global = run;
+	obj = (*env)->NewObject(env, CLASS(RunnableValue), CONSTR(RunnableValue),
+		(jlong)global);
+	return alloc_java_obj(env, obj);
+}
+
+value ocaml_java__runnable_run(value t)
+{
+	jobject const obj = Java_obj_val(t);
+
+	(*env)->CallVoidMethod(env, obj, METHOD(Runnable, run));
+	check_exceptions();
+	return Val_unit;
+}
+
+value ocaml_java__runnable_of_obj(value obj)
+{
+	if (obj == Java_null_val
+		|| !(*env)->IsInstanceOf(env, Java_obj_val(obj), CLASS(Runnable)))
+		caml_failwith("Jrunnable.of_obj");
+	return obj;
+}
