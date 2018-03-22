@@ -53,6 +53,11 @@ let rec translate_type class_name java_path rec_classes polymorphic =
 		type_info ~conv_of sigt "object" ~push_suffix type_
 	in
 
+	let ti_runnable ~conv_of ~conv_to type_ =
+		let sigt = mk_cstr "Ljava/lang/Runnable;" in
+		type_info ~conv_of ~conv_to sigt "object" type_
+	in
+
 	let mn =
 		function
 		| Lident cn when cn = class_name ->
@@ -91,6 +96,28 @@ let rec translate_type class_name java_path rec_classes polymorphic =
 	| [%type: string] as t			-> ti "Ljava/lang/String;" "string" t
 	| [%type: string option] as t	-> ti "Ljava/lang/String;" "string_opt" t
 	| [%type: [%t? _] Java.obj] as t -> ti "Ljava/lang/Object;" "object" t
+
+	| [%type: runnable]				->
+		let conv_of expr =
+			[%expr let r = [%e expr] in
+				if r == Java.null
+				then failwith "Null runnable"
+				else Obj.magic r]
+		and conv_to expr = [%expr Obj.magic [%e expr]] in
+		ti_runnable ~conv_of ~conv_to [%type: Jrunnable.t]
+
+	| [%type: runnable option]		->
+		let conv_of expr =
+			[%expr let r = [%e expr] in
+				if r == Java.null
+				then None
+				else Some (Obj.magic r)]
+		and conv_to expr =
+			[%expr match [%e expr] with
+				| Some r	-> Obj.magic r
+				| None		-> Java.null]
+		in
+		ti_runnable ~conv_of ~conv_to [%type: Jrunnable.t option]
 
 	| [%type: char_sequence]		->
 		let conv_of expr = [%expr Java.to_string ([%e expr])] in

@@ -23,6 +23,10 @@ object
 	method [@static] get_string : string = "get_string"
 	method [@static] wrap_string : string -> string = "wrap_string"
 
+	val [@static] mutable numrun : int = "numrun"
+	method [@static] runrun : runnable -> unit = "runrun"
+	method [@static] getrun : runnable = "getrun"
+
 end
 
 module Java_lang =
@@ -75,6 +79,12 @@ let test_charsequence () =
 	assert (Jstring.contains s "234");
 	assert (not (Jstring.contains s "432"));
 	assert (Jstring.sub_sequence s 5 8 = "567")
+
+let test_runnable () =
+	Test.set'numrun 0;
+	let r = Test.getrun () in
+	Test.runrun r;
+	assert (Test.get'numrun () = 1)
 
 let run () =
 	let _ = Test.create_default () in
@@ -137,5 +147,6 @@ let run () =
 	test_string s';
 
 	test_charsequence ();
+	test_runnable ();
 
 	()
