@@ -3,7 +3,7 @@
 Interop with Java
 
 Provides a low-level, unsafe interface between OCaml and Java
-and high-level, typed OCaml interface using a PPX rewriter
+and high-level, typed OCaml interface using a [PPX rewriter](ppx).
 
 This is still a work in progress.
 
@@ -62,6 +62,8 @@ Modules interfaces:
 - [Jarray](srcs/ml/jarray.mli) to manipulate Java arrays
 - [Jrunnable](srcs/ml/jrunnable.mli) to create and run [Runnable](https://docs.oracle.com/javase/8/docs/api/java/lang/Runnable.html) objects
 - [Jthrowable](srcs/ml/jthrowable.mli) to throw and access Java exceptions
+
+Ppx: [README](ppx/README.md)
 
 Java side:
 - [Caml](srcs/java/juloo/javacaml/Caml.java), call OCaml functions/methods
