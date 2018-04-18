@@ -104,8 +104,8 @@ let impl_item =
 	(* Expects an "id" binding the method ID *)
 	let meth_call static ret =
 		match static, ret with
-		| false, `Void		-> [%expr Java.call_void obj id]
-		| true, `Void		-> [%expr Java.call_static_void cls id]
+		| false, `Void		-> [%expr Jcall.call_void obj id]
+		| true, `Void		-> [%expr Jcall.call_static_void cls id]
 		| false, `Ret ti	-> ti.call
 		| true, `Ret ti		-> ti.call_static
 	in
@@ -158,7 +158,7 @@ let impl_item =
 				[%e sigt]]
 			(load_cls_unsafe body) in
 		[ meth_impl name args (wrap_no_args args)
-			(load [%expr Java.new_ cls id]) ]
+			(load [%expr Jcall.new_ cls id]) ]
 
 (* Generates implementation *)
 let class_impl path_name class_variants fields =

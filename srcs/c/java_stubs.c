@@ -1,6 +1,6 @@
 #include "camljava_utils.h"
-#include "javacaml_utils.h"
 #include "classes.h"
+#include "javacaml_utils.h"
 
 #include <jni.h>
 #include <stddef.h>
@@ -551,7 +551,7 @@ value ocaml_java__new(value cls, value meth)
 	if (obj == NULL)
 	{
 		check_exceptions();
-		caml_failwith("Java.new_: Allocation failed");
+		caml_failwith("Jcall.new_: Allocation failed");
 	}
 	v = alloc_java_obj(env, obj);
 	(*env)->DeleteLocalRef(env, obj);
@@ -564,7 +564,7 @@ value ocaml_java__new(value cls, value meth)
 value ocaml_java__call_##NAME(value obj, value meth)						\
 {																			\
 	if (obj == Java_null_val)												\
-		caml_failwith("Java.call: null");									\
+		caml_failwith("Jcall.call: null");									\
 	begin_call();															\
 	RESULT (*env)->Call##JNAME##MethodA(env,								\
 		Java_obj_val(obj),													\
@@ -589,7 +589,7 @@ value ocaml_java__call_nonvirtual_##NAME(value obj,							\
 	value cls, value meth)													\
 {																			\
 	if (obj == Java_null_val)												\
-		caml_failwith("Java.call_nonvirtual: null");						\
+		caml_failwith("Jcall.call_nonvirtual: null");						\
 	begin_call();															\
 	RESULT (*env)->CallNonvirtual##JNAME##MethodA(env,						\
 		Java_obj_val(obj),													\
@@ -606,15 +606,15 @@ value ocaml_java__call_nonvirtual_##NAME(value obj,							\
 
 // Generates read_field{,_static}_* functions
 #define GEN_READ(NAME, JNAME, CONV_OF) \
-value ocaml_java__read_field_##NAME(value obj, value field)							\
+value ocaml_java__read_field_##NAME(value obj, value field)					\
 {																			\
 	if (obj == Java_null_val)												\
-		caml_failwith("Java.read_field: null");								\
+		caml_failwith("Jcall.read_field: null");							\
 	return CONV_OF((*env)->Get##JNAME##Field(env,							\
 			Java_obj_val(obj),												\
 			(jfieldID)Nativeint_val(field)));								\
 }																			\
-value ocaml_java__read_field_static_##NAME(value cls, value field)					\
+value ocaml_java__read_field_static_##NAME(value cls, value field)			\
 {																			\
 	return CONV_OF((*env)->GetStatic##JNAME##Field(env,						\
 			Java_obj_val(cls),												\
@@ -645,7 +645,7 @@ value ocaml_java__push_##NAME##_unboxed(TYPE v)		\
 value ocaml_java__write_field_##NAME(value obj, value field, value v)			\
 {																				\
 	if (obj == Java_null_val)													\
-		caml_failwith("Java.write_field: null");								\
+		caml_failwith("Jcall.write_field: null");								\
 	(*env)->Set##JNAME##Field(env,												\
 		Java_obj_val(obj),														\
 		(jfieldID)Nativeint_val(field),											\

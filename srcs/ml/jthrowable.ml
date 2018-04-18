@@ -34,12 +34,12 @@ let api = lazy (
 
 let get_localized_message t =
 	let meth = (Lazy.force api).get_localized_message in
-	Java.call_string (to_obj t) meth
+	Jcall.call_string (to_obj t) meth
 
 let get_message t =
 	let meth = (Lazy.force api).get_message in
-	Java.call_string (to_obj t) meth
+	Jcall.call_string (to_obj t) meth
 
 let print_stack_trace t =
 	let meth = (Lazy.force api).print_stack_trace in
-	Java.call_void (to_obj t) meth
+	Jcall.call_void (to_obj t) meth

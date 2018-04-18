@@ -14,8 +14,8 @@ let rec translate_type class_name java_path rec_classes polymorphic =
 	let no_conv expr = expr in
 	let type_info ?(conv_to=no_conv) ?(conv_of=no_conv) sigt suffix
 			?(push_suffix=suffix) type_ =
-		let id prefix = mk_dot (Lident "Java") (prefix ^ suffix)
-		and push = mk_dot (Lident "Java") ("push_" ^ push_suffix) in
+		let id prefix = mk_dot (Lident "Jcall") (prefix ^ suffix)
+		and push = mk_dot (Lident "Jcall") ("push_" ^ push_suffix) in
 		Type_info.create
 			~push
 			~call:(id "call_")

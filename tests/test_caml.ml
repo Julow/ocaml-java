@@ -4,19 +4,19 @@ let test_runnable () =
 	let cls = Jclass.find_class "ocamljava/test/TestCaml" in
 	let runrun r =
 		let m = Jclass.get_meth_static cls "runrun" "(Ljava/lang/Runnable;)V" in
-		Java.push_object (Jrunnable.to_obj r);
-		Java.call_static_void cls m
+		Jcall.push_object (Jrunnable.to_obj r);
+		Jcall.call_static_void cls m
 	and getrun () =
 		Jclass.get_meth_static cls "getrun" "()Ljava/lang/Runnable;"
-		|> Java.call_static_object cls
+		|> Jcall.call_static_object cls
 		|> Jrunnable.of_obj
 	and numrun () =
-		Java.read_field_static_int cls @@
+		Jcall.read_field_static_int cls @@
 		Jclass.get_field_static cls "numrun" "I"
 	in
 	let setnum n =
 		let f = Jclass.get_field_static cls "numrun" "I" in
-		Java.write_field_static_int cls f n
+		Jcall.write_field_static_int cls f n
 	in
 	setnum 0;
 	assert (numrun () = 0);
@@ -45,6 +45,7 @@ let run () =
 	in
 
 	let open Java in
+	let open Jcall in
 
 	push_int 1;
 	assert (call_static_int cls method_static_test = ~-41);

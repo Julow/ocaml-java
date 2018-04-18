@@ -42,4 +42,4 @@ let () = Callback.register "camljava_do_test" Test_caml.run
 let run () =
 	let cls = Jclass.find_class "ocamljava/test/TestJava" in
 	let m_do_test = Jclass.get_meth_static cls "do_test" "()V" in
-	Java.call_static_void cls m_do_test
+	Jcall.call_static_void cls m_do_test

@@ -22,10 +22,14 @@ all: $(T)/camljava.cmxa $(T)/javacaml.cmxa
 
 # -
 
-CMX_FILES = $(T)/java.cmx $(T)/jarray.cmx $(T)/jclass.cmx $(T)/jthrowable.cmx $(T)/jrunnable.cmx
+CMX_FILES = $(T)/java.cmx $(T)/jcall.cmx $(T)/jarray.cmx $(T)/jclass.cmx \
+	$(T)/jthrowable.cmx $(T)/jrunnable.cmx
 
 $(B)/java.o $(T)/java.cmx: srcs/ml/java.ml $(T)/java.cmi | $(B) $(T)
 $(T)/java.cmi: srcs/ml/java.mli | $(T)
+
+$(B)/jcall.o $(T)/jcall.cmx: srcs/ml/jcall.ml $(T)/jcall.cmi $(T)/java.cmi | $(B) $(T)
+$(T)/jcall.cmi: srcs/ml/jcall.mli | $(T)
 
 $(B)/jarray.o $(T)/jarray.cmx: srcs/ml/jarray.ml $(T)/jarray.cmi $(T)/java.cmi | $(B) $(T)
 $(T)/jarray.cmi: srcs/ml/jarray.mli | $(T)
@@ -41,6 +45,7 @@ $(T)/jrunnable.cmi: srcs/ml/jrunnable.mli | $(T)
 
 clean::
 	rm -f $(B)/java.o $(T)/java.cmx $(T)/java.cmi
+	rm -f $(B)/jcall.o $(T)/jcall.cmx $(T)/jcall.cmi
 	rm -f $(B)/jarray.o $(T)/jarray.cmx $(T)/jarray.cmi
 	rm -f $(B)/jclass.o $(T)/jclass.cmx $(T)/jclass.cmi
 	rm -f $(B)/jthrowable.o $(T)/jthrowable.cmx $(T)/jthrowable.cmi
