@@ -6,12 +6,6 @@ type jclass
 
 type jthrowable
 
-type meth
-type meth_static
-type meth_constructor
-type field
-type field_static
-
 exception Exception of jthrowable
 
 external startup : string array -> unit = "ocaml_java__startup"

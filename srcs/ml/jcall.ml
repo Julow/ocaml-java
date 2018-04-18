@@ -1,4 +1,5 @@
 open Java
+open Jclass
 
 external new_ : jclass -> meth_constructor -> _ obj = "ocaml_java__new"
 

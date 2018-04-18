@@ -28,8 +28,8 @@ CMX_FILES = $(T)/java.cmx $(T)/jcall.cmx $(T)/jarray.cmx $(T)/jclass.cmx \
 $(B)/java.o $(T)/java.cmx: srcs/ml/java.ml $(T)/java.cmi | $(B) $(T)
 $(T)/java.cmi: srcs/ml/java.mli | $(T)
 
-$(B)/jcall.o $(T)/jcall.cmx: srcs/ml/jcall.ml $(T)/jcall.cmi $(T)/java.cmi | $(B) $(T)
-$(T)/jcall.cmi: srcs/ml/jcall.mli | $(T)
+$(B)/jcall.o $(T)/jcall.cmx: srcs/ml/jcall.ml $(T)/jcall.cmi $(T)/java.cmi $(T)/jclass.cmi | $(B) $(T)
+$(T)/jcall.cmi: srcs/ml/jcall.mli $(T)/jclass.cmi | $(T)
 
 $(B)/jarray.o $(T)/jarray.cmx: srcs/ml/jarray.ml $(T)/jarray.cmi $(T)/java.cmi | $(B) $(T)
 $(T)/jarray.cmi: srcs/ml/jarray.mli | $(T)

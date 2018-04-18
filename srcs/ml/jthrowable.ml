@@ -18,9 +18,9 @@ let throw_new cls msg =
 external to_obj : t -> _ Java.obj = "%identity"
 
 type api = {
-	get_localized_message : Java.meth;
-	get_message : Java.meth;
-	print_stack_trace : Java.meth
+	get_localized_message : Jclass.meth;
+	get_message : Jclass.meth;
+	print_stack_trace : Jclass.meth
 }
 
 let api = lazy (

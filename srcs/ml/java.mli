@@ -21,19 +21,6 @@ type jclass
 (* Java throwable objects *)
 type jthrowable
 
-(** Methods and fields
-	There is a type for each type of method/field
-	meth				Member method
-	meth_static			Static method
-	meth_constructor	Object constructor
-	field				Object attribute
-	field_static		Static field *)
-type meth
-type meth_static
-type meth_constructor
-type field
-type field_static
-
 (** Raised when a java exception is thrown
 	The parameter is the java Exception *)
 exception Exception of jthrowable

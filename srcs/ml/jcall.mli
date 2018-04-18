@@ -27,6 +27,7 @@
 	| *[]				| 'a jarray option *)
 
 open Java
+open Jclass
 
 (** Adds an argument on the calling stack *)
 external push_int : int -> unit = "ocaml_java__push_int" [@@noalloc]
