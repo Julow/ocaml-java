@@ -57,7 +57,8 @@ Note: the example code uses hardcoded path to `ocaml-java.jar`
 ## Documentation
 
 Modules interfaces:
-- [Java](srcs/ml/java.mli) contains almost everything
+- [Java](srcs/ml/java.mli)
+- [Jcall](srcs/ml/jcall.mli), unsafe low-level api for calling Java methods
 - [Jclass](srcs/ml/jclass.mli) to query class/method/field handles
 - [Jarray](srcs/ml/jarray.mli) to manipulate Java arrays
 - [Jrunnable](srcs/ml/jrunnable.mli) to create and run [Runnable](https://docs.oracle.com/javase/8/docs/api/java/lang/Runnable.html) objects
