@@ -212,4 +212,4 @@ let mapper _ _ = { default_mapper with structure_item }
 
 let () =
 	Driver.register ~name:"ocaml-java-ppx" (module OCaml_406) mapper;
-	Driver.run_as_ppx_rewriter ()
+	Driver.run_main ()

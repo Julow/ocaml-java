@@ -1,7 +1,0 @@
-*.cmi
-*.cmx
-*.o
-*.class
-libtest_javacaml.so
-test_javacaml.jar
-test_camljava

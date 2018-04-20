@@ -1,0 +1,14 @@
+(jbuild_version 1)
+(executable
+ ((name test)
+  (libraries (java unix))
+  (preprocess (pps (ppx)))))
+
+(alias
+ ((name runtest)
+  (deps (../srcs/java/ocaml-java.jar test_javacaml.jar))
+  (action (run ${exe:test.exe} ${^}))))
+
+(rule ((targets (test_javacaml.jar))
+	(deps (Makefile (glob_files ocamljava/test/*.java)))
+	(action (run make CLASS_PATH=${path:../srcs/java/ocaml-java.jar} ${@}))))

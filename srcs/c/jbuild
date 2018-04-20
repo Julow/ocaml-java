@@ -1,0 +1,11 @@
+(jbuild_version 1)
+(library
+ ((name stubs)
+  (c_names (classes java_stubs string_convertions caml))
+  (c_flags (:standard (:include c_flags.sexp) -DTARGET_CAMLJAVA))
+  (c_library_flags (:standard (:include c_library_flags.sexp) -ljvm))))
+
+(rule
+ ((targets (c_flags.sexp c_library_flags.sexp))
+  (deps (config/discover.exe))
+  (action (run ${<}))))
