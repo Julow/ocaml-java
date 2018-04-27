@@ -174,12 +174,18 @@ let run () =
 	Printf.printf "Test times: %f\n" (!sum /. (float samples));
 
 	for i = 0 to 500 do
-		begin try ignore @@ find_class "unknown"; assert false with Not_found -> () end;
-		begin try ignore @@ get_meth cls "unknown" "()V"; assert false with Not_found -> () end;
-		begin try ignore @@ get_meth_static cls "unknown" "()V"; assert false with Not_found -> () end;
-		begin try ignore @@ get_constructor cls "(IIII)V"; assert false with Not_found -> () end;
-		begin try ignore @@ get_field cls "unknown" "()V"; assert false with Not_found -> () end;
-		begin try ignore @@ get_field_static cls "unknown" "()V"; assert false with Not_found -> () end
+		begin try ignore @@ find_class "unknown"; assert false
+			with Jclass.Class_not_found "unknown" -> () end;
+		begin try ignore @@ get_meth cls "unknown" "()V"; assert false
+			with Jclass.Method_not_found ("unknown", "()V") -> () end;
+		begin try ignore @@ get_meth_static cls "unknown" "()V"; assert false
+			with Jclass.Method_not_found _ -> () end;
+		begin try ignore @@ get_constructor cls "(IIII)V"; assert false
+			with Jclass.Method_not_found ("<init>", _) -> () end;
+		begin try ignore @@ get_field cls "unknown" "()V"; assert false
+			with Jclass.Field_not_found _ -> () end;
+		begin try ignore @@ get_field_static cls "unknown" "()V"; assert false
+			with Jclass.Field_not_found _ -> () end
 	done;
 
 	let id_obj_m = get_meth cls "test_id" "(Ljava/lang/Object;)Ljava/lang/Object;" in

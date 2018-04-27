@@ -191,22 +191,18 @@ value ocaml_java__find_class(value name)
 	return v;
 }
 
-static value get_method(jobject class_, char const *name, char const *sig)
+value ocaml_java__class_get_meth(value class_, value name, value sig)
 {
 	jmethodID id;
 
-	id = (*env)->GetMethodID(env, class_, name, sig);
+	id = (*env)->GetMethodID(env, Java_obj_val(class_),
+			String_val(name), String_val(sig));
 	if (id == NULL)
 	{
 		(*env)->ExceptionClear(env);
 		caml_raise_not_found();
 	}
 	return caml_copy_nativeint((intnat)id);
-}
-
-value ocaml_java__class_get_meth(value class_, value name, value sig)
-{
-	return get_method(Java_obj_val(class_), String_val(name), String_val(sig));
 }
 
 value ocaml_java__class_get_meth_static(value class_, value name, value sig)
@@ -221,11 +217,6 @@ value ocaml_java__class_get_meth_static(value class_, value name, value sig)
 		caml_raise_not_found();
 	}
 	return caml_copy_nativeint((intnat)id);
-}
-
-value ocaml_java__class_get_constructor(value class_, value sig)
-{
-	return get_method(Java_obj_val(class_), "<init>", String_val(sig));
 }
 
 value ocaml_java__class_get_field(value class_, value name, value sig)
