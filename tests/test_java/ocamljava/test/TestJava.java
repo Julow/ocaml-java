@@ -1,5 +1,6 @@
 package ocamljava.test;
 
+import java.io.File;
 import juloo.javacaml.Caml;
 import juloo.javacaml.Callback;
 import juloo.javacaml.Value;
@@ -231,7 +232,7 @@ public class TestJava
 	{
 		try
 		{
-			System.loadLibrary("test_javacaml");
+			System.load(new File(args[0]).getAbsolutePath());
 			Caml.startup();
 			do_test();
 			test_camljava();

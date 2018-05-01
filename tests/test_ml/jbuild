@@ -1,0 +1,11 @@
+(jbuild_version 1)
+(library
+ ((name test_caml)
+  (modules (test_caml))
+  (libraries (java unix))))
+
+(library
+ ((name test_ppx)
+  (modules (test_ppx))
+  (libraries (java unix))
+   (preprocess (pps (ppx)))))

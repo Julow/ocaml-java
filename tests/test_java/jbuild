@@ -1,0 +1,8 @@
+(jbuild_version 1)
+(library
+ ((name test_java)
+  (libraries (java))))
+
+(rule ((targets (test_javacaml.jar))
+	(deps (Makefile (glob_files ocamljava/test/*.java)))
+	(action (run make CLASS_PATH=${path:../../srcs/java/ocaml-java.jar} ${@}))))

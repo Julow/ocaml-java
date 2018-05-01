@@ -1,14 +1,22 @@
 (jbuild_version 1)
 (executable
- ((name test)
-  (libraries (java unix))
-  (preprocess (pps (ppx)))))
+ ((name test_camljava)
+  (modules (test_camljava))
+  (libraries (camljava test_caml test_ppx test_java))))
+
+(executable
+ ((name test_javacaml)
+  (modules (test_javacaml))
+  (libraries (javacaml test_caml test_ppx test_java))
+  (modes ((native shared_object)))))
 
 (alias
  ((name runtest)
-  (deps (../srcs/java/ocaml-java.jar test_javacaml.jar))
-  (action (run ${exe:test.exe} ${^}))))
+  (deps (../srcs/java/ocaml-java.jar test_java/test_javacaml.jar))
+  (action (run ${exe:test_camljava.exe} ${^}))))
 
-(rule ((targets (test_javacaml.jar))
-	(deps (Makefile (glob_files ocamljava/test/*.java)))
-	(action (run make CLASS_PATH=${path:../srcs/java/ocaml-java.jar} ${@}))))
+(alias
+ ((name runtest)
+  (action
+   (setenv CLASSPATH "${path:test_java/test_javacaml.jar}:${path:../srcs/java/ocaml-java.jar}"
+   (run java -ea ocamljava.test.TestJava ${path:test_javacaml.so})))))

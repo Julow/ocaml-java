@@ -16,7 +16,7 @@ let test_obj = object
 	method test_int a b = a + b
 end
 
-let () =
+let init () =
 	Callback.register "test_function" (fun () -> print_endline "OCaml function called");
 	Callback.register "test_raise" (fun () -> failwith "failuuure");
 	Callback.register "test_int" (+);
@@ -36,8 +36,6 @@ let () =
 		Jthrowable.throw_new cls msg);
 	Callback.register "test_backtrace" h;
 	print_endline "OCaml loaded"
-
-let () = Callback.register "camljava_do_test" Test_caml.run
 
 let run () =
 	let cls = Jclass.find_class "ocamljava/test/TestJava" in
