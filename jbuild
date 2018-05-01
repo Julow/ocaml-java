@@ -1,0 +1,10 @@
+(jbuild_version 1)
+(library
+ ((name camljava)
+  (wrapped false)
+  (libraries (java stubs stubs_camljava))))
+
+(library
+ ((name javacaml)
+  (wrapped false)
+  (libraries (java stubs stubs_javacaml))))

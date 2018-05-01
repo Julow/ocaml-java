@@ -12,8 +12,6 @@
 #include <caml/memory.h>
 #include <caml/mlvalues.h>
 
-#define JNI_VERSION JNI_VERSION_1_4
-
 static JNIEnv *env;
 
 /*
@@ -263,69 +261,15 @@ value ocaml_java__class_get_field_static(value class_, value name, value sig)
 ** Init
 */
 
-JNIEnv *ocaml_java__camljava_env(void)
+JNIEnv	*ocaml_java__camljava_env(void)
 {
 	return env;
 }
 
-#ifdef TARGET_JAVACAML
-
-void ocaml_java__camljava_init(JNIEnv *_env)
+void	ocaml_java__camljava_setenv(JNIEnv *e)
 {
-	env = _env;
+	env = e;
 }
-
-value ocaml_java__startup(value opt_array)
-{
-	caml_failwith("Java.init: Unavailable when linked to javacaml");
-	return Val_unit;
-	(void)opt_array;
-}
-
-value ocaml_java__shutdown(value unit)
-{
-	return Val_unit;
-	(void)unit;
-}
-
-#else
-
-static JavaVM *jvm;
-
-value ocaml_java__startup(value opt_array)
-{
-	CAMLparam1(opt_array);
-	int const opt_count = caml_array_length(opt_array);
-	JavaVMOption *options;
-	JavaVMInitArgs vm_args;
-	int success;
-	int i;
-
-	options = caml_stat_alloc(sizeof(JavaVMOption) * opt_count);
-	for (i = 0; i < opt_count; i++)
-		options[i].optionString = String_val(Field(opt_array, i));
-	vm_args.version = JNI_VERSION;
-	vm_args.options = options;
-	vm_args.nOptions = opt_count;
-	vm_args.ignoreUnrecognized = JNI_FALSE;
-	success = JNI_CreateJavaVM(&jvm, (void**)&env, &vm_args);
-	caml_stat_free(options);
-	if (success != JNI_OK)
-		caml_failwith("Java.init");
-	ocaml_java__javacaml_init(env);
-	printf("jvm created\n");
-	CAMLreturn(Val_unit);
-}
-
-value ocaml_java__shutdown(value unit)
-{
-	(*jvm)->DestroyJavaVM(jvm);
-	printf("jvm destroyed\n");
-	return Val_unit;
-	(void)unit;
-}
-
-#endif
 
 /*
 ** ========================================================================== **

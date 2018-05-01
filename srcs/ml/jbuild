@@ -1,5 +1,4 @@
 (jbuild_version 1)
 (library
  ((name java)
-  (wrapped false)
-  (libraries (stubs))))
+  (wrapped false)))

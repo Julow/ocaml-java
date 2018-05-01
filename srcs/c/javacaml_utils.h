@@ -24,8 +24,4 @@ value ocaml_java__jvalue_get(JNIEnv *env, jobject v);
 #define JVALUE_NEW ocaml_java__jvalue_new
 #define JVALUE_GET ocaml_java__jvalue_get
 
-// Initialise javacaml
-// defined only if built with -DTARGET_CAMLJAVA
-void ocaml_java__javacaml_init(JNIEnv *env);
-
 #endif

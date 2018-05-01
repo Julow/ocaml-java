@@ -1,6 +1,6 @@
 #include "camljava_utils.h"
-#include "javacaml_utils.h"
 #include "classes.h"
+#include "javacaml_utils.h"
 
 #include <jni.h>
 #include <stddef.h>
@@ -346,16 +346,9 @@ jlong Java_juloo_javacaml_Caml_hashVariant(JNIEnv *env, jclass c,
 }
 
 // ========================================================================== //
-// init
+// Init
 
-#ifdef TARGET_CAMLJAVA
-
-// Caml.startup disabled
-void Java_juloo_javacaml_Caml_startup(JNIEnv *env, jclass c)
-{
-	(void)env;
-	(void)c;
-}
+void	Java_juloo_javacaml_Caml_startup(JNIEnv *env, jclass c);
 
 #define N(NAME, SIGT, MANG)	\
 	{ #NAME, SIGT, Java_juloo_javacaml_Caml_##NAME##MANG }
@@ -393,7 +386,7 @@ static JNINativeMethod native_methods[] = {
 
 // Native methods must be registered if javacaml is not loaded directly
 //  from Java's `System.loadLibrary`
-static int register_natives(JNIEnv *env)
+int	ocaml_java__javacaml_natives(JNIEnv *env)
 {
 	jclass	caml_class;
 	int		r;
@@ -407,40 +400,7 @@ static int register_natives(JNIEnv *env)
 	return (r == 0);
 }
 
-// Initialise the library from camljava
-void ocaml_java__javacaml_init(JNIEnv *env)
+void ocaml_java__javacaml_init()
 {
 	init_arg_stack();
-	if (!register_natives(env))
-		caml_failwith("Failed to link javacaml");
 }
-
-#else
-
-# if OCAML_VERSION_MAJOR >= 4 && OCAML_VERSION_MINOR >= 5
-
-static void init_ocaml(JNIEnv *env, char **argv)
-{
-	value const res = caml_startup_exn(argv);
-
-	if (Is_exception_result(res))
-		throw_caml_exception(env, Extract_exception(res));
-}
-
-# else
-
-#  define init_ocaml(env, argv) caml_startup(argv)
-
-# endif
-
-void Java_juloo_javacaml_Caml_startup(JNIEnv *env, jclass c)
-{
-	static char *argv[] = { "", NULL };
-
-	ocaml_java__camljava_init(env);
-	init_ocaml(env, argv);
-	init_arg_stack();
-	(void)c;
-}
-
-#endif
