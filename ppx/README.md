@@ -26,8 +26,16 @@ This example generates a module named `Class_name` with this signature:
 (* generated *)
 module Class_name :
 sig
+	(** Type representing instances of this class *)
 	type t
+
+	(** [of_obj x] Convert from Java.obj
+		Raises `Failure` if [x] is not an instance of this class *)
 	val of_obj : 'a Java.obj -> t
+
+	(** Returns the class handle *)
+	val __class : unit -> Java.jclass
+
 	(* methods, fields and constructors will be generated here *)
 end
 ```

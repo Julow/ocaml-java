@@ -69,6 +69,8 @@ let class_sigt class_variants fields =
 
 		[%sigi: val __class_name : unit -> string];
 
+		[%sigi: val __class : unit -> Java.jclass];
+
 		[%sigi: val of_obj : 'a Java.obj -> t];
 
 	]
@@ -96,7 +98,7 @@ let impl_item =
 			[%e body]]
 
 	(* Defines "cls" in `body`,
-		assumes the class is loaded (do not calls __load_cls) *)
+		assumes the class is loaded (do not call __class) *)
 	and load_cls_unsafe body =
 		[%expr let cls = Array.unsafe_get __cls 0 in [%e body]]
 	in
@@ -116,7 +118,7 @@ let impl_item =
 		let index = add_global ()
 		and sigt = opti_string_concat (Type_info.meth_sigt sigt) in
 		let load = load_id index
-			[%expr Jclass.get_meth (__load_cls ())
+			[%expr Jclass.get_meth (__class ())
 				[%e mk_cstr jname] [%e sigt]]
 		and wrap body = [%expr (fun obj -> [%e body])] in
 		[ meth_impl name args wrap (load (meth_call false ret)) ]
@@ -125,7 +127,7 @@ let impl_item =
 		let index = add_global ()
 		and sigt = opti_string_concat (Type_info.meth_sigt sigt) in
 		let load body = load_id index
-			[%expr Jclass.get_meth_static (__load_cls ())
+			[%expr Jclass.get_meth_static (__class ())
 				[%e mk_cstr jname] [%e sigt]]
 			(load_cls_unsafe body) in
 		[ meth_impl name args (wrap_no_args args) (load (meth_call true ret)) ]
@@ -133,7 +135,7 @@ let impl_item =
 	| `Field (name, jname, ti, mut)			->
 		let index = add_global () in
 		let load = load_id index
-			[%expr Jclass.get_field (__load_cls ())
+			[%expr Jclass.get_field (__class ())
 				[%e mk_cstr jname] [%e ti.sigt]] in
 		field_impl name mut
 			[%expr (fun obj -> [%e load ti.read_field])]
@@ -142,7 +144,7 @@ let impl_item =
 	| `Field_static (name, jname, ti, mut)	->
 		let index = add_global () in
 		let load body = load_id index
-			[%expr Jclass.get_field_static (__load_cls ())
+			[%expr Jclass.get_field_static (__class ())
 				[%e mk_cstr jname] [%e ti.sigt]]
 				(load_cls_unsafe body) in
 		field_impl name mut
@@ -154,7 +156,7 @@ let impl_item =
 		and sigt = opti_string_concat
 			[%expr "(" ^ [%e concat_sigt args] ^ ")V"] in
 		let load body = load_id index
-			[%expr Jclass.get_constructor (__load_cls ())
+			[%expr Jclass.get_constructor (__class ())
 				[%e sigt]]
 			(load_cls_unsafe body) in
 		[ meth_impl name args (wrap_no_args args)
@@ -188,7 +190,7 @@ let class_impl path_name class_variants fields =
 
 		[%stri let __cls : Jclass.t array = [%e Exp.array cls_array]];
 
-		[%stri let __load_cls () =
+		[%stri let __class () =
 			let cls = Array.unsafe_get __cls 0 in
 			if cls == Obj.magic 0 then begin
 				let cls = Jclass.find_class [%e class_name] in
@@ -200,7 +202,7 @@ let class_impl path_name class_variants fields =
 		[%stri external of_obj_unsafe : 'a Java.obj -> t = "%identity"];
 
 		[%stri let of_obj obj =
-			if Java.instanceof obj (__load_cls ())
+			if Java.instanceof obj (__class ())
 			then of_obj_unsafe obj
 			else failwith "of_obj"]
 
