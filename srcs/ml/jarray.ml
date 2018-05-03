@@ -80,6 +80,30 @@ external get_array : 'a t t -> int -> 'a t
 external get_array_opt : 'a t t -> int -> 'a option t
 	= "ocaml_java__jarray_get_array_opt"
 
+external of_ints : int array -> int t = "ocaml_java__jarray_of_int"
+external of_bools : bool array -> bool t = "ocaml_java__jarray_of_bool"
+external of_bytes : int array -> jbyte t = "ocaml_java__jarray_of_byte"
+external of_shorts : int array -> jshort t = "ocaml_java__jarray_of_short"
+external of_int32s : int32 array -> int32 t = "ocaml_java__jarray_of_int32"
+external of_longs : int64 array -> int64 t = "ocaml_java__jarray_of_long"
+external of_chars : char array -> char t = "ocaml_java__jarray_of_char"
+external of_floats : float array -> float t = "ocaml_java__jarray_of_float"
+external of_doubles : float array -> jdouble t = "ocaml_java__jarray_of_double"
+(* external of_float_array : floatarray -> float t = "ocaml_java__jarray_of_float" *)
+(* external of_double_array : floatarray -> jdouble t = "ocaml_java__jarray_of_double" *)
+
+let of_array create set src =
+	let len = Array.length src in
+	let dst = create len in
+	for i = 0 to len - 1 do
+		set dst i src.(i)
+	done;
+	dst
+
+let of_objects cls src = of_array (create_object cls Java.null) set_object src
+let of_values src = of_array create_value set_value src
+let of_strings src = of_array create_string set_string src
+
 external _of_obj : _ Java.obj -> 'a t = "%identity"
 let of_obj obj =
 	if obj == Java.null then failwith "Jarray.of_obj: null";

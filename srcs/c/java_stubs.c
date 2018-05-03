@@ -439,16 +439,21 @@ static jarray conv_to_array_opt(value opt)
 //  CONV_OF	`TYPE` to OCaml's `value` convertion
 //  DST		field of the `jvalue` union
 //  CONV_TO	OCaml's `value` to `TYPE` convertion
-#define GEN_PRIM(GEN) \
+#define GEN_PRIM_INT(GEN) \
 	GEN(int,		Int,		jint,		Val_long,			i,	Long_val) \
 	GEN(bool,		Boolean,	jboolean,	Val_bool,			z,	Long_val) \
 	GEN(byte,		Byte,		jbyte,		Val_long,			b,	Long_val) \
 	GEN(short,		Short,		jshort,		Val_long,			s,	Long_val) \
 	GEN(char,		Char,		jchar,		Val_long,			c,	Long_val) \
 	GEN(int32,		Int,		jint,		caml_copy_int32,	i,	Int32_val) \
-	GEN(long,		Long,		jlong,		caml_copy_int64,	j,	Int64_val) \
+	GEN(long,		Long,		jlong,		caml_copy_int64,	j,	Int64_val)
+#define GEN_PRIM_FLOAT(GEN) \
 	GEN(float,		Float,		jfloat,		caml_copy_double,	f,	Double_val) \
 	GEN(double,		Double,		jdouble,	caml_copy_double,	d,	Double_val)
+
+#define GEN_PRIM(GEN) \
+	GEN_PRIM_INT(GEN) \
+	GEN_PRIM_FLOAT(GEN)
 
 // Same as `GEN_PRIM` for object types:
 //  string, stringopt, object, value, valueopt
@@ -723,10 +728,45 @@ value ocaml_java__jarray_get_##NAME(value array, value index)				\
 	return CONV_OF(obj);													\
 }
 
+#define GEN_ARRAY_CONV_INT(NAME, JNAME, TYPE, CONV_OF, DST, CONV_TO) \
+static void array_conv_##NAME(value src, mlsize_t length, TYPE *dst)		\
+{																			\
+	for (mlsize_t i = 0; i < length; i++)									\
+		dst[i] = CONV_TO(Field(src, i));									\
+}
+
+#define GEN_ARRAY_CONV_FLOAT(NAME, JNAME, TYPE, CONV_OF, DST, CONV_TO) \
+static void array_conv_##NAME(value src, mlsize_t length, TYPE *dst)		\
+{																			\
+	for (mlsize_t i = 0; i < length; i++)									\
+		dst[i] = Double_field(src, i);										\
+}
+
+GEN_PRIM_INT(GEN_ARRAY_CONV_INT)
+GEN_PRIM_FLOAT(GEN_ARRAY_CONV_FLOAT)
+
+#define GEN_JARRAY_OF(NAME, JNAME, TYPE, CONV_OF, DST, CONV_TO) \
+value ocaml_java__jarray_of_##NAME(value src)								\
+{																			\
+	mlsize_t const	len = caml_array_length(src);							\
+	jarray			dst;													\
+	TYPE			*buff;													\
+	value			res;													\
+																			\
+	dst = (*env)->New##JNAME##Array(env, len);								\
+	buff = (*env)->Get##JNAME##ArrayElements(env, dst, NULL);				\
+	array_conv_##NAME(src, len, buff);										\
+	(*env)->Release##JNAME##ArrayElements(env, dst, buff, 0);				\
+	res = alloc_java_obj(env, dst);											\
+	(*env)->DeleteLocalRef(env, dst);										\
+	return res;																\
+}
+
 GEN_PRIM(GEN_JARRAY_SET_PRIM)
 GEN_OBJ(GEN_JARRAY_SET_OBJ)
 GEN_PRIM(GEN_JARRAY_GET_PRIM)
 GEN_OBJ(GEN_JARRAY_GET_OBJ)
+GEN_PRIM(GEN_JARRAY_OF)
 
 /*
 ** ========================================================================== **

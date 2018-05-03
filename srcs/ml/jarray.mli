@@ -8,6 +8,21 @@ type jshort
 type jdouble
 type 'a jvalue
 
+(** Creates a Java array by copying an OCaml array
+	Raises `Failure` if the allocation fail *)
+val of_ints : int array -> int t
+val of_bools : bool array -> bool t
+val of_bytes : int array -> jbyte t
+val of_shorts : int array -> jshort t
+val of_int32s : int32 array -> int32 t
+val of_longs : int64 array -> int64 t
+val of_chars : char array -> char t
+val of_floats : float array -> float t
+val of_doubles : float array -> jdouble t
+val of_strings : string array -> string t
+val of_values : 'a array -> 'a jvalue t
+val of_objects : Java.jclass -> 'a Java.obj array -> 'a Java.obj t
+
 (** `create_int 4` Creates an array holding 4 ints
 	All elements are initialized with a default value
 	Warning: `string` and `value` arrays are filled with `null`,
