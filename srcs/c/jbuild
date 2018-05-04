@@ -1,6 +1,7 @@
 (jbuild_version 1)
 (library
  ((name stubs)
+  (public_name ocamljava.stubs)
   (c_names (classes java_stubs string_convertions caml))
   (c_flags (:standard (:include c_flags.sexp) -DTARGET_CAMLJAVA))))
 
