@@ -1,6 +1,7 @@
 (jbuild_version 1)
 (library
  ((name ppx)
+  (public_name ocamljava.ppx)
   (libraries (compiler-libs.common ocaml-migrate-parsetree ppx_tools_versioned))
   (kind ppx_rewriter)
   (ppx_runtime_libraries (java))
