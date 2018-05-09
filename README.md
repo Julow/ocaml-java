@@ -9,16 +9,6 @@ This is still a work in progress.
 
 Heavily inspired by [camljava](https://github.com/xavierleroy/camljava)
 
-## Installation
-
-Clone this repository, check where java is and run:
-
-```sh
-make JAVA_HOME="$JAVA_HOME"
-```
-
-Replace `$JAVA_HOME` with the path to Java's JDK
-
 ## Example
 
 A simple example that use the Java's DateFormat class
@@ -45,14 +35,15 @@ let () =
 	print_endline (Date_format.format format date)
 ```
 
-Build & run like this (replace `$JAVA_HOME` with the path the the JDK):
+Example `jbuild` file:
 
-```sh
-ocamlopt -I bin/camljava camljava.cmxa -ppx bin/ocaml-java-ppx example.ml
-LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server ./a.out
 ```
-
-Note: the example code uses hardcoded path to `ocaml-java.jar`
+(jbuild_version 1)
+(executable
+ ((name test)
+  (libraries (ocamljava.camljava))
+  (preprocess (pps (ocamljava.ppx)))))
+```
 
 ## Documentation
 
@@ -66,6 +57,4 @@ Modules interfaces:
 
 Ppx: [README](ppx/README.md)
 
-Java side:
-- [Caml](srcs/java/juloo/javacaml/Caml.java), call OCaml functions/methods
-- [Value](srcs/java/juloo/javacaml/Value.java) is the representation of an OCaml value on the Java side
+Java side: [Caml](srcs/java/juloo/javacaml/Caml.java)
