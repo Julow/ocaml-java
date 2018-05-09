@@ -41,9 +41,9 @@ let class_field =
 			Location.raise_errorf ~loc "Private method"
 		| Cfk_concrete (Fresh, { pexp_desc = Pexp_poly (
 				{ pexp_desc = Pexp_constant (Pconst_string (jname, None)) },
-				Some mtype) })				->
+				Some mtype) })	->
 			let static = is_static pcf_attributes in
-			[], [ `Method (name, jname, method_type mtype, static) ]
+			`Method (name, jname, method_type mtype, static)
 		| Cfk_concrete (Fresh, { pexp_desc = Pexp_poly (
 				{ pexp_loc = loc }, _) })	->
 			Location.raise_errorf ~loc "Expecting Java method name"
@@ -61,14 +61,13 @@ let class_field =
 		begin match impl with
 		| Cfk_concrete (Fresh, { pexp_desc = Pexp_constraint (
 				{ pexp_desc = Pexp_constant (Pconst_string (jname, None)) },
-				ftype ) })					->
+				ftype ) })		->
 			let static = is_static pcf_attributes in
-			[], [ `Field (name, jname, ftype, mut = Mutable, static) ]
+			`Field (name, jname, ftype, mut = Mutable, static)
 		| Cfk_concrete (Fresh, { pexp_desc = Pexp_constraint (
 				{ pexp_loc = loc }, _ ) })	->
 			Location.raise_errorf ~loc "Expecting Java field name"
-		| Cfk_concrete (Fresh,
-				{ pexp_loc = loc})			->
+		| Cfk_concrete (Fresh, { pexp_loc = loc}) ->
 			Location.raise_errorf ~loc "Expecting field type"
 		| Cfk_virtual _						->
 			Location.raise_errorf ~loc "Virtual field"
@@ -78,9 +77,10 @@ let class_field =
 
 	| { pcf_desc = Pcf_initializer { pexp_desc =
 			Pexp_constraint ({ pexp_desc = Pexp_ident { txt = Lident name };
-					pexp_loc = loc}, ctype) } }	->
+					pexp_loc = loc }, ctype) } }	->
 		begin match method_type ctype with
-		| args, { ptyp_desc = Ptyp_any } -> [], [ `Constructor (name, args) ]
+		| args, { ptyp_desc = Ptyp_any } ->
+			`Constructor (name, args)
 		| _ -> Location.raise_errorf ~loc "Constructor must returns `_'"
 		end
 	| { pcf_desc = Pcf_initializer { pexp_desc = Pexp_constraint (
@@ -91,7 +91,7 @@ let class_field =
 
 	| { pcf_desc = Pcf_inherit (Fresh, { pcl_desc =
 			Pcl_constr ({ txt = id }, []) }, None) } ->
-		[ id ], []
+		`Inherit id
 	| { pcf_desc = Pcf_inherit (Fresh, { pcl_loc = loc }, None) } ->
 		Location.raise_errorf ~loc "Expecting class name"
 	| { pcf_desc = Pcf_inherit (Fresh, _, Some { loc }) } ->
@@ -113,8 +113,10 @@ let class_ =
 					pcstr_self = { ppat_desc = Ppat_any };
 					pcstr_fields = fields } }) } } ->
 		let supers, fields = List.fold_right (fun field (s, f) ->
-			let s', f' = class_field field in
-			s' @ s, f' @ f
+			match class_field field with
+			| `Inherit s'	-> s' :: s, f
+			| (`Method _ | `Field _ | `Constructor _) as f' ->
+				s, (f', field.pcf_loc) :: f
 		) fields ([], []) in
 		class_name, java_path, supers, fields
 	| { pci_expr = { pcl_desc = Pcl_fun (_, _, _, { pcl_desc = Pcl_structure {

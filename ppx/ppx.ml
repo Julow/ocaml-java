@@ -198,8 +198,11 @@ let structure_item mapper =
 		let classes = List.map unwrap classes in
 		let rec_classes = List.map (fun (n, p, _, _) -> n, p) classes in
 		let gen (name, java_path, supers, fields) =
-			let transl = translate_field name java_path rec_classes
-			and class_variants = class_variants java_path rec_classes supers in
+			let transl (field, loc) =
+				translate_field name java_path rec_classes field, loc
+			and class_variants =
+				class_variants java_path rec_classes supers
+			in
 			Gen.class_ name java_path class_variants (List.map transl fields)
 		in
 		begin match List.map gen classes with

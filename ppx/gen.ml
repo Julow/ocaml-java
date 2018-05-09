@@ -74,7 +74,7 @@ let class_sigt class_variants fields =
 		[%sigi: val of_obj : 'a Java.obj -> t];
 
 	]
-	@ List.fold_right (fun field items -> sigt_item field @ items) fields []
+	@ List.fold_right (fun (field, _) items -> sigt_item field @ items) fields []
 
 (* Implementation *)
 let impl_item =
@@ -173,8 +173,10 @@ let class_impl path_name class_variants fields =
 	in
 
 	(* Items *)
-	let items = List.fold_right (fun field items ->
-		impl_item add_global field @ items
+	let items = List.fold_right (fun (field, loc) items ->
+		Ast_helper.with_default_loc loc
+			(fun () -> impl_item add_global field)
+		@ items
 	) fields [] in
 
 	(* Intro *)
