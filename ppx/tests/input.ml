@@ -1,7 +1,23 @@
-class%java a "a.A" =
-object
-	method a : unit = "a"
-end
+class%java a "a" "b" = object end
+class%java a "A" = object initializer (create : int) end
+class%java a "A" = object initializer (create : int -> int) end
+class%java a "A" = object val x : _ = "x" end
+class%java a "a" = object val a = "a" end
+class%java a "a" = object val a : unit = "a" end
+class%java a "a" = object val a : int -> float = "a" end
+class%java a "A" = object method x : _ -> int = "x" end
+class%java a "A" = object method x : _ = "x" end
+class%java a "A" = object method x : int -> _ = "x" end
+class%java a = object end
+class%java a "b" = object method x = "x" end
+class%java a b = object end
+class%java a "b" = object method x : int = 1 end
+class%java a "B" = object method! x : int = "x" end
+class%java a "b" = object method private x : int = "x" end
+class%java a "a" = object (self) end
+class%java a "a" = object method a : unit -> unit = "fail" end
+class%java a "B" = object method virtual x : int end
+class%java a "a.A" = object method a : unit = "a" end
 
 class%java test "test.Test" =
 object

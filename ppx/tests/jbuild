@@ -6,7 +6,7 @@
 (rule
  ((targets (output))
   (deps (input.ml))
-  (action (run ${exe:ppx_test.exe} -o ${@} ${<}))))
+  (action (run ${exe:ppx_test.exe} --embed-errors -o ${@} ${<}))))
 (alias
  ((name runtest)
   (action (diff ref.ml output))))

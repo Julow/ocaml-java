@@ -72,3 +72,7 @@ let opti_string_concat exp =
 		| []		-> mk_cstr ""
 	in
 	concat (opti [] (flatten [] exp))
+
+let error_to_ext loc msg =
+	let pstr = PStr [ Str.eval (mk_cstr msg) ] in
+	Str.extension ({ txt = "ocaml.error"; loc }, pstr)

@@ -184,30 +184,34 @@ let class_variants java_path rec_classes supers =
 	in
 	Typ.variant rows Closed None
 
+let classes cls =
+	let java_path_fmt = String.map (function '.' -> '/' | c -> c) in
+	let unwrap cls =
+		let name, java_path, supers, fields = Unwrap.class_ cls in
+		name, java_path_fmt java_path, supers, fields
+	in
+	let cls = List.map unwrap cls in
+	let rec_classes = List.map (fun (n, p, _, _) -> n, p) cls in
+	let gen (name, java_path, supers, fields) =
+		let transl (field, loc) =
+			translate_field name java_path rec_classes field, loc
+		and class_variants =
+			class_variants java_path rec_classes supers
+		in
+		Gen.class_ name java_path class_variants (List.map transl fields)
+	in
+	List.map gen cls
+
 (** Map `class` with the `%java` extension *)
 let structure_item mapper =
-	let java_path_fmt = String.map (function '.' -> '/' | c -> c) in
 	function
 	| { pstr_desc = Pstr_extension (({ txt = "java" }, PStr [
-			{ pstr_desc = Pstr_class classes }
+			{ pstr_desc = Pstr_class cls }
 		]), _) }	->
-		let unwrap cls =
-			let name, java_path, supers, fields = Unwrap.class_ cls in
-			name, java_path_fmt java_path, supers, fields
-		in
-		let classes = List.map unwrap classes in
-		let rec_classes = List.map (fun (n, p, _, _) -> n, p) classes in
-		let gen (name, java_path, supers, fields) =
-			let transl (field, loc) =
-				translate_field name java_path rec_classes field, loc
-			and class_variants =
-				class_variants java_path rec_classes supers
-			in
-			Gen.class_ name java_path class_variants (List.map transl fields)
-		in
-		begin match List.map gen classes with
+		begin match classes cls with
+		| exception Location.Error e -> error_to_ext e.loc e.msg
 		| [ cls ]	-> Str.module_ cls
-		| classes	-> Str.rec_module classes
+		| cls		-> Str.rec_module cls
 		end
 	| item			-> default_mapper.structure_item mapper item
 
