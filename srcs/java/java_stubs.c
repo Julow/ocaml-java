@@ -731,14 +731,16 @@ value ocaml_java__jarray_get_##NAME(value array, value index)				\
 #define GEN_ARRAY_CONV_INT(NAME, JNAME, TYPE, CONV_OF, DST, CONV_TO) \
 static void array_conv_##NAME(value src, mlsize_t length, TYPE *dst)		\
 {																			\
-	for (mlsize_t i = 0; i < length; i++)									\
+	mlsize_t i;																\
+	for (i = 0; i < length; i++)											\
 		dst[i] = CONV_TO(Field(src, i));									\
 }
 
 #define GEN_ARRAY_CONV_FLOAT(NAME, JNAME, TYPE, CONV_OF, DST, CONV_TO) \
 static void array_conv_##NAME(value src, mlsize_t length, TYPE *dst)		\
 {																			\
-	for (mlsize_t i = 0; i < length; i++)									\
+	mlsize_t i;																\
+	for (i = 0; i < length; i++)											\
 		dst[i] = Double_field(src, i);										\
 }
 
