@@ -25,10 +25,6 @@ type jthrowable
 	The parameter is the java Exception *)
 exception Exception of jthrowable
 
-(** Initialize the JVM
-	Takes the JVM options as parameter *)
-val init : string array -> unit
-
 (** The null value *)
 val null : 'a obj
 

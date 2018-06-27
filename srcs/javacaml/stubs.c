@@ -8,21 +8,6 @@
 void	ocaml_java__camljava_setenv(JNIEnv *e);
 void	ocaml_java__javacaml_init();
 
-// (ml) Java.startup
-value	ocaml_java__startup(value opt_array)
-{
-	caml_failwith("Java.init: Unavailable when linked to javacaml");
-	return Val_unit;
-	(void)opt_array;
-}
-
-// (ml) Java.shutdown
-value	ocaml_java__shutdown(value unit)
-{
-	return Val_unit;
-	(void)unit;
-}
-
 // Use caml_startup_exn if available
 # if OCAML_VERSION_MAJOR >= 4 && OCAML_VERSION_MINOR >= 5
 static void init_ocaml(JNIEnv *env, char **argv)
