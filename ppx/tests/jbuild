@@ -2,7 +2,7 @@
 (executable
  ((name ppx_test)
   (modules (ppx_test))
-  (libraries (ocamljava.ppx ocaml-migrate-parsetree))))
+  (libraries (ocamljava-ppx ocaml-migrate-parsetree))))
 (rule
  ((targets (output))
   (deps (input.ml))

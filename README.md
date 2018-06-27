@@ -42,7 +42,7 @@ Example `jbuild` file:
 (executable
  ((name test)
   (libraries (ocamljava.camljava))
-  (preprocess (pps (ocamljava.ppx)))))
+  (preprocess (pps (ocamljava-ppx)))))
 ```
 
 ## Documentation
