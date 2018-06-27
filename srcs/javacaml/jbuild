@@ -1,0 +1,7 @@
+(jbuild_version 1)
+(library
+ ((name javacaml)
+  (public_name ocamljava-javacaml)
+  (libraries (ocamljava))
+  (c_names (stubs))
+  (c_flags (:standard (:include ../config/c_flags.sexp)))))
