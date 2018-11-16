@@ -5,6 +5,5 @@ depends: [
 	"jbuilder" { build }
 	"ocaml-migrate-parsetree"
 	"ppx_tools_versioned"
-	"ocamljava"
 ]
 build: [[ "jbuilder" "build" "-p" name "-j" jobs ]]

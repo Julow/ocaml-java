@@ -7,7 +7,7 @@
 (executable
  ((name test_javacaml)
   (modules (test_javacaml))
-  (libraries (javacaml test_caml test_ppx test_java))
+  (libraries (javacaml java test_caml test_ppx test_java))
   (modes ((native shared_object)))))
 
 (alias

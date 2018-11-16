@@ -12,7 +12,7 @@ $(BUILD_DIR)/ocaml-java.jar: $(CLASS_FILES) | $(BUILD_DIR)
 	cd $(@D); jar cf $(@F) $(CLASS_FILES_REL)
 
 $(BUILD_DIR)/%.class: %.java | $(BUILD_DIR)
-	$(JAVAC) -sourcepath . -d $(BUILD_DIR) $<
+	$(JAVAC) -source 1.7 -target 1.7 -sourcepath . -d $(BUILD_DIR) $<
 
 $(BUILD_DIR):
 	mkdir -p $@
