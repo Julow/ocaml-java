@@ -137,17 +137,17 @@ let rec translate_type class_name java_path rec_classes polymorphic =
 
 	| [%type: [%t? t] array]		-> ti_array t
 	| [%type: [%t? t] array option]	->
-		let Type_info.{ sigt; type_ } = ti_array t in
+		let { Type_info.sigt; type_; _ } = ti_array t in
 		type_info sigt "array_opt" [%type: [%t type_] option]
 
-	| [%type: [%t? { ptyp_desc = Ptyp_constr ({ txt = id }, []) }]] ->
+	| [%type: [%t? { ptyp_desc = Ptyp_constr ({ txt = id; _ }, []); _ }]] ->
 		let mn, java_path = mn id in
 		let sigt = [%expr "L" ^ [%e java_path] ^ ";"]
 		and type_ = if polymorphic
 			then Typ.constr (mn "t'") [ Typ.any () ]
 			else Typ.constr (mn "t") [] in
 		type_info sigt "object" type_
-	| { ptyp_loc = loc } -> Location.raise_errorf ~loc "Unsupported type"
+	| { ptyp_loc = loc; _ } -> Location.raise_errorf ~loc "Unsupported type"
 
 let translate_field class_name java_path rec_classes =
 	let transl_type = translate_type class_name java_path rec_classes in
@@ -205,9 +205,9 @@ let classes cls =
 (** Map `class` with the `%java` extension *)
 let structure_item mapper =
 	function
-	| { pstr_desc = Pstr_extension (({ txt = "java" }, PStr [
-			{ pstr_desc = Pstr_class cls }
-		]), _) }	->
+	| { pstr_desc = Pstr_extension (({ txt = "java"; _ }, PStr [
+			{ pstr_desc = Pstr_class cls; _ }
+		]), _); _ }	->
 		begin match classes cls with
 		| exception Location.Error e -> error_to_ext e.loc e.msg
 		| [ cls ]	-> Str.module_ cls

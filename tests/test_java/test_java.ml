@@ -1,4 +1,4 @@
-let print_endline s = ()
+let print_endline _ = ()
 
 exception Ok
 

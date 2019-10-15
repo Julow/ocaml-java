@@ -1,4 +1,3 @@
-open Ast_mapper
 open Ast_helper
 open Parsetree
 open Asttypes
@@ -50,9 +49,9 @@ let opti_string_concat exp =
 	let rec flatten acc =
 		function
 		| { pexp_desc = Pexp_apply ({ pexp_desc = Pexp_ident
-				{ txt = Lident "^" } }, [ (_, l); (_, r) ])}		->
+				{ txt = Lident "^"; _ }; _ }, [ (_, l); (_, r) ]); _}		->
 			flatten (flatten acc l) r
-		| { pexp_desc = Pexp_constant (Pconst_string (s, None)) }	->
+		| { pexp_desc = Pexp_constant (Pconst_string (s, None)); _ }	->
 			`S s :: acc
 		| e -> `E e :: acc
 	in

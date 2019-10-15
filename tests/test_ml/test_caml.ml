@@ -165,15 +165,15 @@ let run () =
 
 	let samples = 3 in
 	let sum = ref 0. in
-	for i = 0 to samples - 1 do
+	for _ = 0 to samples - 1 do
 		let t = Unix.gettimeofday () in
-		for i = 0 to 500 do test_id_all () done;
+		for _ = 0 to 500 do test_id_all () done;
 		let t = Unix.gettimeofday () -. t in
 		sum := t +. !sum
 	done;
 	Printf.printf "Test times: %f\n" (!sum /. (float samples));
 
-	for i = 0 to 500 do
+	for _ = 0 to 500 do
 		begin try ignore @@ find_class "unknown"; assert false
 			with Jclass.Class_not_found "unknown" -> () end;
 		begin try ignore @@ get_meth cls "unknown" "()V"; assert false
@@ -234,7 +234,7 @@ let run () =
 		with Failure _ -> ()
 	in
 
-	for i = 0 to 500 do
+	for _ = 0 to 500 do
 		must_fail (fun () -> Jarray.get_string (arr ()) 0);
 		assert (Jarray.get_string_opt (arr ()) 0 = None);
 		must_fail (fun () -> Jarray.get_value (arr ()) 0);

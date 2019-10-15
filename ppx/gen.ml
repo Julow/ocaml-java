@@ -1,4 +1,3 @@
-open Parsetree
 open Longident
 open Ast_helper
 open Ast_tools
@@ -6,7 +5,7 @@ open Type_info
 
 (** Generates the module for a class (see `class_` below) *)
 
-let rec module_name =
+let module_name =
 	function
 	| Ldot (l, r)	-> Ldot (l, String.capitalize_ascii r)
 	| Lident n		-> Lident (String.capitalize_ascii n)
@@ -48,11 +47,11 @@ let sigt_item =
 		[ meth_sigt name args wrap (ret_type ret) ]
 	| `Method_static (name, _, (args, ret))	->
 		[ meth_sigt name args (wrap_no_args args) (ret_type ret) ]
-	| `Field (name, jname, ti, mut)			->
+	| `Field (name, _jname, ti, mut)			->
 		field_sigt name mut
 			[%type: _ t' -> [%t ti.type_]]
 			[%type: _ t' -> [%t ti.type_] -> unit]
-	| `Field_static (name, jname, ti, mut)	->
+	| `Field_static (name, _jname, ti, mut)	->
 		field_sigt name mut
 			[%type: unit -> [%t ti.type_]]
 			[%type: [%t ti.type_] -> unit]

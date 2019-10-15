@@ -61,7 +61,8 @@ val new_ : jclass -> meth_constructor -> 'a obj
 (** Perform a call
 	Assume enough argument are in the calling stack (see `push`)
 	Raises `Failure` if the object is null
-	Raises `Exception` if the method throws a Java exception
+  [call_string] and [call_value] raise `Failure` if the result is null
+	Raises `Java.Exception` if the method throws a Java exception
 	May crash if some argument are missing or have the wrong representation *)
 val call_void : 'a obj -> meth -> unit
 val call_int : 'a obj -> meth -> int
@@ -73,11 +74,9 @@ val call_long : 'a obj -> meth -> int64
 val call_char : 'a obj -> meth -> char
 val call_float : 'a obj -> meth -> float
 val call_double : 'a obj -> meth -> float
-(** Raises `Failure` if the result is null *)
 val call_string : 'a obj -> meth -> string
 val call_string_opt : 'a obj -> meth -> string option
 val call_object : 'a obj -> meth -> 'b obj
-(** Raises `Failure` if the result is null *)
 val call_value : 'a obj -> meth -> 'b
 val call_value_opt : 'a obj -> meth -> 'b option
 val call_array : 'a obj -> meth -> 'b jarray
@@ -125,6 +124,8 @@ val call_nonvirtual_array_opt : 'a obj -> jclass -> meth -> 'b jarray option
 (** Unsafe interface for reading and writing Java fields *)
 
 (** Read the value of a field
+  [read_field_string] and [read_field_value] raise `Failure`
+    if the result is null
 	May crash if the representation is incorrect *)
 val read_field_int : 'a obj -> field -> int
 val read_field_bool : 'a obj -> field -> bool
@@ -135,17 +136,17 @@ val read_field_long : 'a obj -> field -> int64
 val read_field_char : 'a obj -> field -> char
 val read_field_float : 'a obj -> field -> float
 val read_field_double : 'a obj -> field -> float
-(** Raises `Failure` if the value is `null` *)
 val read_field_string : 'a obj -> field -> string
 val read_field_string_opt : 'a obj -> field -> string option
 val read_field_object : 'a obj -> field -> 'b obj
-(** Raises `Failure` if the value is `null` *)
 val read_field_value : 'a obj -> field -> 'b
 val read_field_value_opt : 'a obj -> field -> 'b option
 val read_field_array : 'a obj -> field -> 'b jarray
 val read_field_array_opt : 'a obj -> field -> 'b jarray option
 
-(** Same as `read_field`, for static fields *)
+(** Same as `read_field`, for static fields
+  [read_field_static_double] and [read_field_static_value] raise `Failure`
+    if the result is null *)
 val read_field_static_int : jclass -> field_static -> int
 val read_field_static_bool : jclass -> field_static -> bool
 val read_field_static_byte : jclass -> field_static -> int
@@ -155,11 +156,9 @@ val read_field_static_long : jclass -> field_static -> int64
 val read_field_static_char : jclass -> field_static -> char
 val read_field_static_float : jclass -> field_static -> float
 val read_field_static_double : jclass -> field_static -> float
-(** Raises `Failure` if the value is `null` *)
 val read_field_static_string : jclass -> field_static -> string
 val read_field_static_string_opt : jclass -> field_static -> string option
 val read_field_static_object : jclass -> field_static -> 'a obj
-(** Raises `Failure` if the value is `null` *)
 val read_field_static_value : jclass -> field_static -> 'a
 val read_field_static_value_opt : jclass -> field_static -> 'a option
 val read_field_static_array : jclass -> field_static -> 'a jarray
