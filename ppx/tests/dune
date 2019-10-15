@@ -1,0 +1,16 @@
+(executable
+ (name ppx_test)
+ (modules ppx_test)
+ (libraries ocamljava-ppx ocaml-migrate-parsetree))
+
+(rule
+ (targets output)
+ (deps
+  (:< input.ml))
+ (action
+  (run %{exe:ppx_test.exe} --embed-errors -o %{targets} %{<})))
+
+(alias
+ (name runtest)
+ (action
+  (diff ref.ml output)))

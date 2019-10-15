@@ -1,0 +1,8 @@
+(library
+ (name ppx)
+ (public_name ocamljava-ppx)
+ (libraries compiler-libs.common ocaml-migrate-parsetree ppx_tools_versioned)
+ (kind ppx_rewriter)
+ (preprocess
+  (pps ppx_tools_versioned.metaquot_406))
+ (flags :standard -open Migrate_parsetree -open Ast_406))

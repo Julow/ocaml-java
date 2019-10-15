@@ -1,7 +1,0 @@
-(jbuild_version 1)
-(library
- ((name java)
-  (public_name ocamljava)
-  (wrapped false)
-  (c_names (classes java_stubs string_convertions caml))
-  (c_flags (:standard (:include ../config/c_flags.sexp)))))

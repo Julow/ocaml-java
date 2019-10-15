@@ -1,0 +1,12 @@
+(library
+ (name camljava)
+ (public_name ocamljava-camljava)
+ (libraries ocamljava)
+ (c_names stubs)
+ (c_flags
+  :standard
+  (:include ../config/c_flags.sexp))
+ (c_library_flags
+  :standard
+  (:include ../config/c_library_flags.sexp)
+  -ljvm))

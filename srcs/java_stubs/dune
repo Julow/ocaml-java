@@ -1,0 +1,12 @@
+(rule
+ (targets ocaml-java.jar)
+ (deps
+  Makefile
+  (glob_files juloo/javacaml/*.java))
+ (action
+  (run make BUILD_DIR=. %{targets})))
+
+(install
+ (section lib)
+ (files ocaml-java.jar)
+ (package ocamljava-jar))

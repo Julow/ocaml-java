@@ -1,0 +1,25 @@
+(executable
+ (name test_camljava)
+ (modules test_camljava)
+ (libraries camljava test_caml test_ppx test_java))
+
+(executable
+ (name test_javacaml)
+ (modules test_javacaml)
+ (libraries javacaml java test_caml test_ppx test_java)
+ (modes
+  (native shared_object)))
+
+(alias
+ (name runtest)
+ (deps ../srcs/java/ocaml-java.jar test_java/test_javacaml.jar)
+ (action
+  (run %{exe:test_camljava.exe} %{deps})))
+
+(alias
+ (name runtest)
+ (action
+  (setenv
+   CLASSPATH
+   "%{dep:test_java/test_javacaml.jar}:%{dep:../srcs/java/ocaml-java.jar}"
+   (run java -ea ocamljava.test.TestJava %{dep:test_javacaml.so}))))

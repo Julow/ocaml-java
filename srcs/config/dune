@@ -1,0 +1,9 @@
+(executable
+ (name discover))
+
+(rule
+ (targets c_flags.sexp c_library_flags.sexp)
+ (deps
+  (:< discover.exe))
+ (action
+  (run %{<})))

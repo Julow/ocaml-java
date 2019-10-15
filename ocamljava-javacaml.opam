@@ -2,7 +2,7 @@ opam-version: "1.2"
 version: "dev"
 homepage: "https://github.com/Julow/ocaml-java"
 depends: [
-	"jbuilder" { build }
+	"dune" {build & >= "1.0" }
 	"ocamljava"
 ]
-build: [[ "jbuilder" "build" "-p" name "-j" jobs ]]
+build: [[ "dune" "build" "-p" name "-j" jobs ]]
