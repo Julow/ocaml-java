@@ -3,7 +3,7 @@ version: "dev"
 homepage: "https://github.com/Julow/ocaml-java"
 depends: [
 	"dune" {build & >= "1.0" }
-	"ocaml-migrate-parsetree"
+	"ocaml-migrate-parsetree" { < "2.0.0" }
 	"ppx_tools_versioned"
 ]
 build: [[ "dune" "build" "-p" name "-j" jobs ]]
